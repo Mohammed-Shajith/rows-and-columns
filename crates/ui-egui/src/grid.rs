@@ -2482,7 +2482,7 @@ fn interact(app: &mut SheetApp, ui: &mut egui::Ui, resp: &egui::Response, geo: &
                     Ok(_) => return,
                     Err(e) if e == not_a_value_cell => {}
                     Err(e) => {
-                        app.message = Some(("GridCraft".into(), crate::clean_error(&e)));
+                        app.message = Some(("Rows&Columns".into(), crate::clean_error(&e)));
                         return;
                     }
                 }
@@ -2678,7 +2678,7 @@ fn interact(app: &mut SheetApp, ui: &mut egui::Ui, resp: &egui::Response, geo: &
                     let mode = if mods.command { "alternate" } else { "series" };
                     match app.run("edit.autoFill", json!({"source": src.a1(), "target": t.a1(), "mode": mode})) {
                         Ok(_) => set_fill_tag(app, src, t),
-                        Err(e) => app.message = Some(("GridCraft".into(), crate::clean_error(&e))),
+                        Err(e) => app.message = Some(("Rows&Columns".into(), crate::clean_error(&e))),
                     }
                 }
             }
@@ -2699,7 +2699,7 @@ fn interact(app: &mut SheetApp, ui: &mut egui::Ui, resp: &egui::Response, geo: &
             }
             Drag::MoveCols { source, before: Some(before) } => {
                 if let Err(e) = app.run("sheet.moveColumns", json!({"cols": source.a1(), "before": before})) {
-                    app.message = Some(("GridCraft".into(), crate::clean_error(&e)));
+                    app.message = Some(("Rows&Columns".into(), crate::clean_error(&e)));
                 }
             }
             _ => {}
@@ -2751,7 +2751,7 @@ fn format_painter_apply(app: &mut SheetApp) {
         if let Some(dest) = dest
             && let Err(e) = app.run("edit.formatPainter", json!({"apply": dest}))
         {
-            app.message = Some(("GridCraft".into(), crate::clean_error(&e)));
+            app.message = Some(("Rows&Columns".into(), crate::clean_error(&e)));
         }
     }
 }
@@ -3621,14 +3621,14 @@ fn fill_options_tag(app: &mut SheetApp, ui: &mut egui::Ui, geo: &Geo, sh: &Sheet
     if let Some(mode) = chosen {
         if let Err(e) = app.run("edit.undo", json!({})) {
             app.grid.fill_tag = None;
-            app.message = Some(("GridCraft".into(), crate::clean_error(&e)));
+            app.message = Some(("Rows&Columns".into(), crate::clean_error(&e)));
             return;
         }
         match app.run("edit.autoFill", json!({"source": tag.src.a1(), "target": tag.target.a1(), "mode": mode})) {
             Ok(_) => set_fill_tag(app, tag.src, tag.target),
             Err(e) => {
                 app.grid.fill_tag = None;
-                app.message = Some(("GridCraft".into(), crate::clean_error(&e)));
+                app.message = Some(("Rows&Columns".into(), crate::clean_error(&e)));
             }
         }
     }
@@ -3656,7 +3656,7 @@ fn fill_menu(app: &mut SheetApp, ui: &mut egui::Ui, was_open: bool) {
                         let direction = if target.width() != src.width() { "rows" } else { "columns" };
                         app.open_dialog("series", json!({"direction": direction}));
                     } else if let Err(e) = app.run("edit.autoFill", json!({"source": src.a1(), "target": target.a1(), "mode": mode})) {
-                        app.message = Some(("GridCraft".into(), crate::clean_error(&e)));
+                        app.message = Some(("Rows&Columns".into(), crate::clean_error(&e)));
                     }
                 }
             }

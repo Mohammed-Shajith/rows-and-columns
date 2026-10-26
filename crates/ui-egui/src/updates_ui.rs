@@ -2,8 +2,12 @@
 //! offers the new release: Update and Restart (direct self-update), Download or Later. The flow
 //! itself is `craft_update::updater::Updater`.
 
-use craft_update::suite::GRIDCRAFT;
+use craft_update::app::App;
 use craft_update::updater::{Action, Status, Updater};
+
+/// Rows&Columns checks its own repository, never GridCraft's: an "update" from upstream would
+/// replace this build (and its fixes) with stock GridCraft.
+const ROWS_AND_COLUMNS: App = App::new("rows-and-columns", "Rows&Columns", "Spreadsheets and data", "Mohammed-Shajith/rows-and-columns");
 
 use crate::SheetApp;
 
@@ -19,7 +23,7 @@ pub(crate) struct Runtime {
 
 impl Default for Runtime {
     fn default() -> Self {
-        Self { updater: Updater::new(&GRIDCRAFT, VERSION), startup: false, manual: false }
+        Self { updater: Updater::new(&ROWS_AND_COLUMNS, VERSION), startup: false, manual: false }
     }
 }
 
@@ -42,13 +46,13 @@ pub(crate) fn tick(app: &mut SheetApp, ctx: &egui::Context) {
     rt.updater.tick(ctx);
     let lang = app.ui.language;
     let outcome = match rt.updater.status() {
-        Status::UpToDate => Some(lang.tr("GridCraft {version} is up to date.").replace("{version}", VERSION)),
+        Status::UpToDate => Some(lang.tr("Rows&Columns {version} is up to date.").replace("{version}", VERSION)),
         Status::Failed(e) => Some(lang.tr("Could not check for updates: {error}").replace("{error}", e)),
         Status::Idle | Status::Checking => None,
     };
     if let Some(message) = outcome {
         rt.updater.dismiss_status();
-        app.message = Some(("GridCraft".into(), message));
+        app.message = Some(("Rows&Columns".into(), message));
     }
 }
 

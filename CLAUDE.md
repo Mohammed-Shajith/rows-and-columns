@@ -1,3 +1,18 @@
+# Rows&Columns (a modified GridCraft): read this first
+
+This repository is **Rows&Columns**, a personal, public fork of GridCraft (`upstream` remote =
+storytold/gridcraft). Where the GridCraft instructions below disagree, this section wins:
+- No `plan/` directory or ArtCraft autonomous protocol here. Work comes from the owner's flaw log
+  (outside the repo) and the owner's requests.
+- Every change is recorded in `VERSION_LOG.xlsx` (one row per version; updated with
+  `../tools/version_log.py`) and, when it's a decision, in `DECISIONS.md`.
+- User-visible name: `crate::APP_NAME` ("Rows&Columns"; `Rows&&Columns` in native macOS menus).
+  Internal crate and binary names stay `gridcraft*` (DECISIONS D06). Don't reintroduce ArtCraft
+  marks (D07).
+- Before fixing anything, check whether upstream already fixed it (D04).
+- GridCraft's engineering rules below still apply: never crash, tests with every fix, fmt and
+  clippy `-D warnings`, the asset rule, layering.
+
 # GridCraft — instructions for agents
 
 GridCraft is a clean-room, open-source, Rust-native spreadsheet targeting Microsoft Excel parity — and superiority (speed, openness, agent control). It runs natively on macOS, Windows, Linux and BSD, and on the web via WASM. Siblings with the same conventions: `../designcraft` (InDesign-class, the closest reference), `../photocraft` (Photoshop), `../vectorcraft` (Illustrator), `../pdfcraft` (Acrobat), `../filmcraft` (Premiere), `../lightcraft` (Lightroom), `../effectcraft` (After Effects).

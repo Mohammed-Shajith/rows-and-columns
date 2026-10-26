@@ -54,6 +54,14 @@ use serde_json::{Value as Json, json};
 pub use control::{ControlRequest, ControlResponse};
 pub mod desktop_theme;
 
+/// The app's display name: window title, menus, messages and About. Rows&Columns is a modified
+/// version of GridCraft (`UPSTREAM_REPO_URL`); internal crate and binary names stay `gridcraft*`.
+pub const APP_NAME: &str = "Rows&Columns";
+/// Where Rows&Columns lives: source, issues and (later) releases.
+pub const APP_REPO_URL: &str = "https://github.com/Mohammed-Shajith/rows-and-columns";
+/// The project Rows&Columns is based on.
+pub const UPSTREAM_REPO_URL: &str = "https://github.com/storytold/gridcraft";
+
 /// Persisted UI preferences.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -728,7 +736,7 @@ impl SheetApp {
         if e.contains("is not available right now") {
             self.toast = Some((e, now_ms()));
         } else {
-            self.message = Some(("GridCraft".into(), clean_error(&e)));
+            self.message = Some(("Rows&Columns".into(), clean_error(&e)));
         }
     }
 
@@ -889,7 +897,7 @@ impl SheetApp {
         for req in self.session.take_ui_requests() {
             match req {
                 UiRequest::Dialog(name, params) => self.open_dialog(&name, params),
-                UiRequest::Message(m) => self.message = Some(("GridCraft".into(), m)),
+                UiRequest::Message(m) => self.message = Some(("Rows&Columns".into(), m)),
                 UiRequest::EditCell(text) => {
                     let text = text.map(|text| {
                         self.session
@@ -990,7 +998,7 @@ impl SheetApp {
             Ok(r) => self.after_open(Some(path), &r),
             // A password-protected workbook: ask for the password; the dialog opens it.
             Err(e) if e.contains(gridcraft_engine::io::PASSWORD_REQUIRED) => self.open_dialog("openPassword", json!({"path": path})),
-            Err(e) => self.message = Some(("GridCraft".into(), clean_error(&e))),
+            Err(e) => self.message = Some(("Rows&Columns".into(), clean_error(&e))),
         }
         self.after_engine();
     }
@@ -1032,7 +1040,7 @@ impl SheetApp {
             let text = if dropped {
                 "This workbook's VBA macros could not be loaded and were dropped, so they will not be in the saved file. Keep the original file."
             } else {
-                "This workbook contains VBA macros. GridCraft keeps them when you save as .xlsm, but does not run them."
+                "This workbook contains VBA macros. Rows&Columns keeps them when you save as .xlsm, but does not run them."
             };
             self.notice = Some(Notice { text: text.into(), kind: NoticeKind::Warning, action: Some(("What this means".into(), "macros".into())) });
         } else {
@@ -1216,7 +1224,7 @@ impl SheetApp {
         let text = match self.session.active().map(|d| formula_locale::canonical(&text, ed.locale, &d.wb, ed.sheet, ed.cell)) {
             Some(Ok(text)) => text,
             Some(Err(error)) => {
-                self.message = Some(("GridCraft".into(), error.to_string()));
+                self.message = Some(("Rows&Columns".into(), error.to_string()));
                 self.editor = Some(ed);
                 self.session.mode = gridcraft_engine::Mode::Edit;
                 return false;
@@ -1228,7 +1236,7 @@ impl SheetApp {
             && let Some((dv, msg)) = gridcraft_engine::cmd::data::check_validation(&d.wb, ed.sheet, ed.cell, &text)
         {
             if dv.error_style == gridcraft_engine::model::ErrorStyle::Stop {
-                let title = if dv.error_title.is_empty() { "GridCraft".to_string() } else { dv.error_title.clone() };
+                let title = if dv.error_title.is_empty() { "Rows&Columns".to_string() } else { dv.error_title.clone() };
                 self.message = Some((title, msg));
                 self.editor = Some(ed);
                 self.session.mode = gridcraft_engine::Mode::Edit;
@@ -1240,7 +1248,7 @@ impl SheetApp {
         if self.session.active().is_some_and(|d| d.wb.active_sheet() != ed.sheet)
             && let Err(e) = self.session.run("sheet.activate", json!({"sheet": ed.sheet}))
         {
-            self.message = Some(("GridCraft".into(), clean_error(&e)));
+            self.message = Some(("Rows&Columns".into(), clean_error(&e)));
             self.editor = Some(ed);
             self.session.mode = gridcraft_engine::Mode::Edit;
             return false;
@@ -1271,7 +1279,7 @@ impl SheetApp {
                 true
             }
             Err(e) => {
-                self.message = Some(("GridCraft".into(), clean_error(&e)));
+                self.message = Some(("Rows&Columns".into(), clean_error(&e)));
                 self.editor = Some(ed);
                 self.session.mode = gridcraft_engine::Mode::Edit;
                 false
@@ -1609,7 +1617,7 @@ impl SheetApp {
                     self.backstage = None;
                     self.open_dialog("openPassword", json!({"name": name, "base64": b64}));
                 }
-                Err(e) => self.message = Some(("GridCraft".into(), clean_error(&e))),
+                Err(e) => self.message = Some(("Rows&Columns".into(), clean_error(&e))),
             }
             self.after_engine();
         }
@@ -1635,10 +1643,9 @@ impl SheetApp {
 
     /// Look for a newer release once, in the background, as the desktop app starts (a no-op on the
     /// web). A found release opens the update prompt; nothing is shown when GridCraft is current.
-    pub fn start_update_check(&mut self) {
-        #[cfg(not(target_arch = "wasm32"))]
-        updates_ui::start(self, false);
-    }
+    ///
+    /// Rows&Columns: off until it publishes its own releases; Help ▸ Check for Updates… still works.
+    pub fn start_update_check(&mut self) {}
 
     /// Help ▸ Check for Updates…: look now, and say so when GridCraft is up to date or the check fails.
     pub fn check_for_updates(&mut self) {
@@ -1646,7 +1653,7 @@ impl SheetApp {
         updates_ui::start(self, true);
         #[cfg(target_arch = "wasm32")]
         {
-            self.message = Some(("GridCraft".into(), "The web version is always the latest release.".into()));
+            self.message = Some(("Rows&Columns".into(), "The web version is always the latest release.".into()));
         }
     }
 

@@ -79,9 +79,9 @@ impl eframe::App for App {
 
 fn config_dir() -> Option<std::path::PathBuf> {
     if cfg!(target_os = "macos") {
-        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Application Support/GridCraft"))
+        std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join("Library/Application Support/Rows&Columns"))
     } else if cfg!(windows) {
-        std::env::var_os("APPDATA").map(|a| std::path::PathBuf::from(a).join("GridCraft"))
+        std::env::var_os("APPDATA").map(|a| std::path::PathBuf::from(a).join("Rows&Columns"))
     } else {
         std::env::var_os("XDG_CONFIG_HOME")
             .map(std::path::PathBuf::from)
@@ -258,13 +258,13 @@ fn main() -> eframe::Result<()> {
     // The restart helper a self-update spawns: it finishes the swap and relaunches, then exits.
     if let Some(done) = craft_update::self_update::finish(&craft_update::suite::GRIDCRAFT, &std::env::args_os().skip(1).collect::<Vec<_>>()) {
         if let Err(e) = done {
-            eprintln!("GridCraft update helper failed: {e}");
+            eprintln!("Rows&Columns update helper failed: {e}");
             std::process::exit(1);
         }
         return Ok(());
     }
     if args.iter().any(|a| a == "--version" || a == "-V") {
-        println!("GridCraft {}", env!("CARGO_PKG_VERSION"));
+        println!("Rows&Columns {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
     let mut control_port: Option<u16> = std::env::var("GRIDCRAFT_CONTROL_PORT").ok().and_then(|p| p.parse().ok());
@@ -298,7 +298,7 @@ fn main() -> eframe::Result<()> {
     if let Some(logger) = logger {
         match log_dir().filter(|_| prefs_enabled()) {
             Some(dir) => match logger.attach_dir(&dir) {
-                Ok(path) => log::info!("GridCraft {}, log file {}", env!("CARGO_PKG_VERSION"), path.display()),
+                Ok(path) => log::info!("Rows&Columns {}, log file {}", env!("CARGO_PKG_VERSION"), path.display()),
                 // Standard error only by now (`attach_dir` gave up on the file); unlike `eprintln!`, never panics.
                 Err(e) => log::warn!("no log file: {e}"),
             },
@@ -327,7 +327,7 @@ fn main() -> eframe::Result<()> {
         app.open_path(f);
     }
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("GridCraft")
+        .with_title("Rows&Columns")
         .with_inner_size([1440.0, 900.0])
         .with_min_inner_size([640.0, 420.0])
         .with_app_id("ai.storyteller.gridcraft")
@@ -375,7 +375,7 @@ fn main() -> eframe::Result<()> {
     let pending = std::cell::Cell::new(Some(app));
     let run = |options: eframe::NativeOptions| {
         eframe::run_native(
-            "GridCraft",
+            "Rows&Columns",
             options,
             Box::new(|cc| {
                 let Some(mut app) = pending.take() else {
@@ -441,7 +441,7 @@ mod packaging_tests {
         assert!(mac.iter().any(|e| e == "xlsx"), "Info.plist.in extensions not found: {mac:?}");
         assert_eq!(mac, win);
         for ext in &mac {
-            assert!(FileKind::from_path(&format!("book.{ext}")).is_some(), "GridCraft doesn't open .{ext}");
+            assert!(FileKind::from_path(&format!("book.{ext}")).is_some(), "Rows&Columns doesn't open .{ext}");
         }
     }
 }
