@@ -1138,46 +1138,58 @@ fn autofit_cols(s: &mut Session, p: &Json) -> Result<Json> {
     let measure = s.text_width.clone();
     edit(s, |cx| {
         let Some(sh) = cx.wb.sheet(si) else { return Ok(Json::Null) };
-        let mut widths = Vec::new();
-        let mut measured: std::collections::HashMap<StyleId, std::collections::HashMap<String, f32>> = Default::default();
-        let mut distinct = 0usize;
-        let used = sh.used_range();
+        let Some(used) = sh.used_range() else { return Ok(Json::Null) };
+        // Only columns holding cells can change, so clamp every area to the used columns: a
+        // whole-sheet selection then costs the data's width, not 16,384 columns.
+        let c0 = used.start.col;
+        let mut target = vec![false; used.end.col.saturating_sub(c0) as usize + 1];
         for (a, b) in lines {
-            for c in a..=b.min(a + 16383) {
-                let Some(u) = used else { continue };
-                let col = RangeRef::new(CellRef::new(u.start.row, c), CellRef::new(u.end.row, c));
-                let mut max: f32 = 0.0;
-                for (cell, _) in sh.cells.iter_range(col) {
-                    if sh.merge_at(cell).is_some_and(|m| !m.is_single()) {
-                        continue;
-                    }
-                    let id = sh.style_id(cell);
-                    let st = cx.wb.styles.get(id);
-                    let text = crate::display::cell_text(&cx.wb, sh, cell);
-                    for line in text.lines() {
-                        let w = match &measure {
-                            Some(m) => {
-                                let known = measured.entry(id).or_default();
-                                match known.get(line) {
-                                    Some(w) => *w,
-                                    None => {
-                                        let w = m(line, &st.font, distinct < EXACT_TEXT_WIDTHS);
-                                        known.insert(line.to_owned(), w);
-                                        distinct += 1;
-                                        w
-                                    }
-                                }
-                            }
-                            None => approx_text_width(line, st.font.size, st.font.bold),
-                        };
-                        max = max.max(w + 6.0 + st.align.indent as f32 * 9.0 + sh.filter_button_space(cell));
-                    }
-                }
-                if max > 0.0 {
-                    widths.push((c, max.clamp(8.0, 1785.0)));
+            for c in a.max(c0)..=b.min(used.end.col) {
+                if let Some(t) = target.get_mut(c.saturating_sub(c0) as usize) {
+                    *t = true;
                 }
             }
         }
+        let (Some(first), Some(last)) = (target.iter().position(|&t| t), target.iter().rposition(|&t| t)) else {
+            return Ok(Json::Null);
+        };
+        let span = RangeRef::new(CellRef::new(used.start.row, c0 + first as u32), CellRef::new(used.end.row, c0 + last as u32));
+        let has_merges = !sh.merges.is_empty();
+        let mut max = vec![0f32; target.len()];
+        let mut measured: std::collections::HashMap<StyleId, std::collections::HashMap<String, f32>> = Default::default();
+        let mut distinct = 0usize;
+        // One pass in storage order (row-major), keeping a running maximum per column, instead
+        // of a scan of every used row for each column.
+        for (cell, _) in sh.cells.iter_range(span) {
+            let i = cell.col.saturating_sub(c0) as usize;
+            if target.get(i) != Some(&true) || (has_merges && sh.merge_at(cell).is_some_and(|m| !m.is_single())) {
+                continue;
+            }
+            let id = sh.style_id(cell);
+            let st = cx.wb.styles.get(id);
+            let text = crate::display::cell_text(&cx.wb, sh, cell);
+            for line in text.lines() {
+                let w = match &measure {
+                    Some(m) => {
+                        let known = measured.entry(id).or_default();
+                        match known.get(line) {
+                            Some(w) => *w,
+                            None => {
+                                let w = m(line, &st.font, distinct < EXACT_TEXT_WIDTHS);
+                                known.insert(line.to_owned(), w);
+                                distinct += 1;
+                                w
+                            }
+                        }
+                    }
+                    None => approx_text_width(line, st.font.size, st.font.bold),
+                };
+                if let Some(m) = max.get_mut(i) {
+                    *m = m.max(w + 6.0 + st.align.indent as f32 * 9.0 + sh.filter_button_space(cell));
+                }
+            }
+        }
+        let widths: Vec<(u32, f32)> = max.iter().enumerate().filter(|(_, m)| **m > 0.0).map(|(i, m)| (c0 + i as u32, m.clamp(8.0, 1785.0))).collect();
         let sh = cx.sheet_mut(si)?;
         for (c, w) in widths {
             let e = sh.cols.entry(c).or_default();
