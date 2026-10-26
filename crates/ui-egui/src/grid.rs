@@ -2105,6 +2105,9 @@ fn hover_cursor(app: &SheetApp, ctx: &egui::Context, resp: &egui::Response, poin
         if app.grid.drag == Drag::None && !pointer.any_down() {
             resp.clone().on_hover_text_at_pointer("Drag to fill cells. Drag from inside a cell to select a range.");
         }
+    } else if in_cells && app.editor.is_none() && is_filter_button(sh, geo, p) {
+        // A filter dropdown is a button: the pointing hand says so, as in Excel.
+        ctx.set_cursor_icon(CursorIcon::PointingHand);
     } else if in_cells && app.editor.is_none() && on_cur_border {
         ctx.set_cursor_icon(CursorIcon::Move);
     } else if in_cells {
