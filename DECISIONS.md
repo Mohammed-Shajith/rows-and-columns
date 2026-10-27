@@ -76,3 +76,28 @@ fail. Builds are made locally with `packaging/macos/package.sh`.
 columns (≈5.7 billion lookups on a 350k × 12 file; ~250 s). Now it clamps to the used columns and
 makes one row-major pass keeping a maximum per column (~2 s, Excel's speed). Measurement and
 padding are unchanged, so results equal per-column AutoFit (tested).
+
+### D12 · Stop using GridCraft itself; keep reading its fixes
+**2026-10-27.** Chosen by the user: Rows&Columns is the only app. The official GridCraft app was
+moved to the Trash, and pushing to GridCraft's repository is blocked in the local checkout
+(`upstream` push URL disabled). GridCraft's code is still *read*: newer upstream commits are merged
+in when they bring fixes (55 on 2026-10-27), because that's free work. Every change we make goes
+only to this repository.
+
+### D13 · How upstream updates are merged
+**2026-10-27.** Upstream reorganises code often (on 2026-10-27 it split large files into modules).
+When a merge conflicts because code moved, we take upstream's new layout and re-apply our change in
+the new place, rather than keeping our old copy of the file. Our changes are small and listed per
+version in `VERSION_LOG.xlsx`, which keeps that easy. A merge is part of the next version, not a
+version of its own.
+
+### D14 · Data-loss bugs jump the queue
+**2026-10-27.** G09 (big XLSX sheets silently truncated at ~71k rows) was fixed before the planned
+colour work. Anything that can lose the user's data or crash goes first, whatever the agreed order.
+
+### D15 · Dark theme colours come from measuring Excel
+**2026-10-27.** The dark palette is set from pixel samples of Excel for Mac screenshots (frame,
+ribbon, headings, selection, dialogs, gridlines), not from guesses. Colour values describe a look,
+not Microsoft's artwork; no icons, images or theme files were copied. One new colour setting,
+`header_all_text`, was needed because Excel uses dark letters on a fully selected heading and light
+letters on a partly selected one. Every text/background pair stays in the WCAG contrast test.
