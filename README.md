@@ -15,19 +15,21 @@ account.
 
 ## Status
 
-**Version 1.0** (based on GridCraft 0.12.1). Every change is listed in
+**Version 1.1** (based on GridCraft 0.12.1 plus newer upstream fixes). Every change is listed in
 [`VERSION_LOG.xlsx`](VERSION_LOG.xlsx), and the reasoning behind them in
 [`DECISIONS.md`](DECISIONS.md).
 
-What 1.0 changes from GridCraft:
+What Rows&Columns changes from GridCraft so far:
 
 | | What | Effect |
 | --- | --- | --- |
 | Speed | AutoFit column width (select all, double-click a column border) makes one pass over the data | 350,000 rows × 12 columns: **~250 s → ~2 s** |
 | Filters | The cursor turns into a pointing hand over filter buttons | matches Excel |
 | Name | Rows&Columns: its own app name, bundle id, settings folder and update channel | runs side by side with GridCraft |
+| Big files | Sheets with more than ~1,000,000 cells load completely (were cut at ~71,000 rows) | no silent data loss (1.1) |
+| Look | Dark theme colours measured from Excel for Mac | Excel-like dark mode (1.1) |
 
-Coming next: an Excel-like dark theme, richer filter menus ("contains", "greater than", Auto
+Coming next: richer filter menus ("contains", "greater than", Auto
 Apply), Text to Columns with date formats (DMY/MDY), and keeping the window responsive during long
 operations.
 
