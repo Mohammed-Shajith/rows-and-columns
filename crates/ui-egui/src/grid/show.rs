@@ -490,7 +490,13 @@ pub(crate) fn paint_headers(
                         pc.line_segment([pos2(x + dx, cr.top() + 3.0), pos2(x + dx, cr.bottom())], hidden_mark);
                     }
                 }
-                let color = if col_sel(c) { t.header_sel_text } else { t.header_text };
+                let color = if !col_sel(c) {
+                    t.header_text
+                } else if full_col(c) {
+                    t.header_all_text
+                } else {
+                    t.header_sel_text
+                };
                 match headings.iter().find(|h| h.col == c) {
                     Some(h) => {
                         // The name is cut off at the button, as a cell's text is at its neighbour.
@@ -531,7 +537,13 @@ pub(crate) fn paint_headers(
                         pr.line_segment([pos2(cr.left() + 3.0, y + dy), pos2(cr.right(), y + dy)], hidden_mark);
                     }
                 }
-                let color = if row_sel(rr) { t.header_sel_text } else { t.header_text };
+                let color = if !row_sel(rr) {
+                    t.header_text
+                } else if full_row(rr) {
+                    t.header_all_text
+                } else {
+                    t.header_sel_text
+                };
                 pr.text(cr.center(), Align2::CENTER_CENTER, (rr as u64 + 1).to_string(), font.clone(), color);
             }
         }
