@@ -208,6 +208,17 @@ fn named_entity(name: &str) -> Option<char> {
     })
 }
 
+/// Elements below `el` (not counting `el`), without recursion.
+fn descendants(el: &El) -> usize {
+    let mut count = 0usize;
+    let mut todo: Vec<&El> = vec![el];
+    while let Some(e) = todo.pop() {
+        count = count.saturating_add(e.children.len());
+        todo.extend(e.children.iter());
+    }
+    count
+}
+
 /// Parses a whole part into a tree.
 pub fn parse(xml: &[u8]) -> Result<El, IoError> {
     parse_streaming(xml, &[], &mut |_| Ok(()))
@@ -244,6 +255,10 @@ pub fn parse_streaming(xml: &[u8], split: &[&str], cb: &mut dyn FnMut(El) -> Res
         match stack.last_mut() {
             Some(parent) => {
                 if split.contains(&el.name.as_str()) {
+                    // Its descendants were counted as they joined it; it leaves the tree now, so
+                    // they no longer count against the cap (otherwise a big sheet's rows were
+                    // refused after ~1,000,000 cells and values, #2526).
+                    *kept = kept.saturating_sub(descendants(&el));
                     cb(el)?;
                 } else {
                     *kept = kept.saturating_add(1);
@@ -501,6 +516,26 @@ mod tests {
         let xml = format!("<r>{}<y/></r>", "<x/>".repeat(MAX_XML_NODES + 1));
         let err = parse(xml.as_bytes()).unwrap_err();
         assert!(err.to_string().contains("elements"), "{err}");
+    }
+
+    /// #2526: cells inside streamed rows leave with their row, so a sheet with far more than
+    /// `MAX_XML_NODES` cells and values streams completely; the cap still holds for kept elements.
+    #[test]
+    fn streamed_rows_do_not_count_against_the_element_cap() {
+        let rows = MAX_XML_NODES / 3 + 10; // 4 descendants per row: over the cap in total
+        let xml = format!("<worksheet><sheetData>{}</sheetData></worksheet>", "<row><c><v>1</v></c><c><v>2</v></c></row>".repeat(rows));
+        let mut seen = 0usize;
+        let tree = parse_streaming(xml.as_bytes(), &["row"], &mut |row| {
+            assert_eq!(row.children.len(), 2);
+            seen += 1;
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(seen, rows);
+        assert_eq!(tree.name, "worksheet");
+
+        let kept = format!("<r><row/>{}</r>", "<x/>".repeat(MAX_XML_NODES + 1));
+        assert!(parse_streaming(kept.as_bytes(), &["row"], &mut |_| Ok(())).is_err(), "unstreamed elements still capped");
     }
 
     #[test]
