@@ -116,7 +116,7 @@ echo "==> assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # Executable and icon carry the display name (CFBundleExecutable / CFBundleIconFile).
 cp "$WORK/bin/gridcraft" "$APP/Contents/MacOS/RowsAndColumns"
-cp "$ROOT/assets/app-icon/gridcraft.icns" "$APP/Contents/Resources/AppIcon.icns"
+cp "$ROOT/assets/app-icon/rows-and-columns.icns" "$APP/Contents/Resources/AppIcon.icns"
 # Bundled dependency font notices are installed before the app is signed.
 cp "$ROOT/NOTICE" "$ROOT/ATTRIBUTION.md" "$APP/Contents/Resources/"
 # Licences of the embedded craft-fonts fonts (only when built with CRAFT_FONTS_DIR).
