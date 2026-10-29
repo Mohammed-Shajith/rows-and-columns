@@ -460,11 +460,15 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.text(4.5, 11.5, "Z", 6.0, c, (false, false));
             g.stroke(&[(8.0, 3.0), (8.0, 13.0)], blue);
             g.poly(&[(6.5, 11.0), (9.5, 11.0), (8.0, 13.5)], blue);
-            g.poly(&[(10.0, 3.0), (15.0, 3.0), (13.0, 7.5), (13.0, 12.0), (12.0, 11.0), (12.0, 7.5)], light);
+            g.poly(&[(10.0, 3.0), (15.5, 3.0), (13.3, 7.5), (11.7, 7.5)], blue);
+            g.poly(&[(11.7, 7.2), (13.3, 7.2), (13.3, 12.5), (11.7, 11.5)], shade(blue, 0.85));
         }
         Icon::Find | Icon::Search | Icon::Zoom => {
+            // Rows&Columns G05: a tinted lens with a glint and a heavier handle.
+            g.circle(6.5, 6.5, 4.0, Some(pal.wash(Cat::Blue)), None);
+            g.line(&[(9.6, 9.6), (14.0, 14.0)], c, 2.4);
             g.circle(6.5, 6.5, 4.0, None, Some(c));
-            g.line(&[(9.5, 9.5), (14.0, 14.0)], c, 1.6);
+            g.line(&[(4.4, 5.6), (5.2, 4.3), (6.6, 3.7)], paper, 1.1);
         }
         Icon::Undo | Icon::Redo => {
             let flip = icon == Icon::Redo;
@@ -537,6 +541,7 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.rect(2.0, 2.5, 12.0, 11.0, Some(paper), Some(c));
             g.rect(2.0, 2.5, 12.0, 3.0, Some(if icon == Icon::Table { blue } else { green }), None);
             g.stroke(&[(6.0, 2.5), (6.0, 13.5)], light);
+            g.stroke(&[(10.0, 5.5), (10.0, 13.5)], light);
             g.stroke(&[(2.0, 9.5), (14.0, 9.5)], light);
             if icon == Icon::PivotTable {
                 g.poly(&[(9.0, 7.0), (12.5, 7.0), (12.5, 10.5)], orange);
@@ -579,6 +584,9 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
         Icon::Comment | Icon::Note => {
             g.poly(&[(2.0, 3.0), (14.0, 3.0), (14.0, 11.0), (2.0, 11.0)], if icon == Icon::Note { pal.wash(Cat::Amber) } else { paper });
             g.line(&[(2.0, 3.0), (14.0, 3.0), (14.0, 11.0), (7.0, 11.0), (4.0, 14.0), (4.0, 11.0), (2.0, 11.0), (2.0, 3.0)], c, 1.1);
+            // Rows&Columns G05: lines of text inside the bubble.
+            g.line(&[(4.5, 6.0), (11.5, 6.0)], blue, 1.3);
+            g.line(&[(4.5, 8.5), (9.5, 8.5)], blue, 1.3);
         }
         Icon::TextBox => {
             g.rect(2.0, 3.0, 12.0, 10.0, None, Some(c));
@@ -603,7 +611,12 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
                 g.circle(x, y, 0.8, Some(c), None);
             }
         }
-        Icon::Filter => g.poly(&[(2.0, 3.0), (14.0, 3.0), (9.5, 8.5), (9.5, 13.5), (6.5, 12.0), (6.5, 8.5)], c),
+        Icon::Filter => {
+            // Rows&Columns G05: a solid blue funnel (was a flat outline-coloured shape).
+            g.poly(&[(2.0, 3.0), (14.0, 3.0), (9.5, 8.5), (6.5, 8.5)], blue);
+            g.poly(&[(6.5, 8.0), (9.5, 8.0), (9.5, 13.5), (6.5, 12.0)], shade(blue, 0.85));
+            g.line(&[(2.0, 3.0), (14.0, 3.0), (9.5, 8.5), (9.5, 13.5), (6.5, 12.0), (6.5, 8.5), (2.0, 3.0)], shade(blue, 0.6), 0.9);
+        }
         Icon::SortAsc | Icon::SortDesc => {
             let (a, b) = if icon == Icon::SortAsc { ("A", "Z") } else { ("Z", "A") };
             g.text(5.0, 4.5, a, 6.5, c, (false, false));
@@ -612,19 +625,33 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.poly(&[(9.0, 11.0), (13.0, 11.0), (11.0, 14.0)], blue);
         }
         Icon::Duplicates => {
-            g.rect(2.0, 2.0, 9.0, 4.0, Some(paper), Some(c));
-            g.rect(5.0, 7.0, 9.0, 4.0, Some(paper), Some(c));
-            g.line(&[(9.0, 12.0), (14.0, 15.0)], red, 1.4);
-            g.line(&[(14.0, 12.0), (9.0, 15.0)], red, 1.4);
+            // Rows&Columns G05: two identical rows, the copy marked with a red removal badge.
+            g.rect(1.5, 2.0, 10.0, 4.0, Some(paper), Some(c));
+            g.rect(1.5, 2.0, 2.5, 4.0, Some(blue), None);
+            g.rect(3.5, 7.0, 10.0, 4.0, Some(paper), Some(c));
+            g.rect(3.5, 7.0, 2.5, 4.0, Some(blue), None);
+            g.circle(12.0, 12.0, 3.4, Some(red), None);
+            g.line(&[(10.6, 10.6), (13.4, 13.4)], paper, 1.3);
+            g.line(&[(13.4, 10.6), (10.6, 13.4)], paper, 1.3);
         }
         Icon::TextColumns => {
-            g.rect(1.5, 3.0, 5.5, 10.0, None, Some(c));
-            g.rect(9.0, 3.0, 5.5, 10.0, None, Some(c));
-            g.poly(&[(7.0, 6.0), (9.0, 8.0), (7.0, 10.0)], blue);
+            // Rows&Columns G05: one column of text split into two, with a green arrow.
+            g.rect(1.0, 3.0, 5.0, 10.0, Some(paper), Some(c));
+            for y in [5.5, 8.0, 10.5] {
+                g.stroke(&[(2.3, y), (4.7, y)], light);
+            }
+            g.rect(9.5, 3.0, 2.8, 10.0, Some(paper), Some(c));
+            g.rect(12.5, 3.0, 2.8, 10.0, Some(paper), Some(c));
+            g.poly(&[(6.6, 6.0), (9.0, 8.0), (6.6, 10.0)], green);
         }
         Icon::Validation => {
-            g.rect(2.0, 3.0, 12.0, 10.0, None, Some(c));
-            g.line(&[(4.0, 8.0), (6.5, 10.5), (11.5, 5.5)], green, 1.4);
+            // Rows&Columns G05: a list on paper with a green check badge.
+            g.rect(1.5, 2.0, 10.5, 11.5, Some(paper), Some(c));
+            for y in [5.0, 7.5, 10.0] {
+                g.stroke(&[(3.5, y), (9.5, y)], light);
+            }
+            g.circle(11.5, 11.5, 3.6, Some(green), None);
+            g.line(&[(9.8, 11.6), (11.1, 12.9), (13.3, 10.3)], paper, 1.3);
         }
         Icon::Group | Icon::Ungroup | Icon::Subtotal => {
             g.stroke(&[(3.0, 3.0), (3.0, 13.0), (6.0, 13.0)], c);
@@ -646,9 +673,12 @@ fn paint_with(p: &Painter, rect: Rect, icon: Icon, c: Color32, pal: &Palette) {
             g.line(&[(4.0, 11.0), (6.5, 13.5), (12.0, 8.5)], green, 1.4);
         }
         Icon::Freeze => {
-            g.rect(2.0, 2.5, 12.0, 11.0, None, Some(c));
-            g.rect(2.0, 2.5, 12.0, 3.0, Some(pal.wash(Cat::Blue)), None);
-            g.rect(2.0, 2.5, 3.5, 11.0, Some(pal.wash(Cat::Blue)), None);
+            // Rows&Columns G05: a sheet whose frozen row and column are solid blue.
+            g.rect(2.0, 2.5, 12.0, 11.0, Some(paper), Some(c));
+            g.rect(2.0, 2.5, 12.0, 3.0, Some(blue), None);
+            g.rect(2.0, 2.5, 3.5, 11.0, Some(blue), None);
+            g.stroke(&[(5.5, 9.5), (14.0, 9.5)], light);
+            g.stroke(&[(9.8, 5.5), (9.8, 13.5)], light);
             g.line(&[(2.0, 5.5), (14.0, 5.5)], blue, 1.2);
             g.line(&[(5.5, 2.5), (5.5, 13.5)], blue, 1.2);
         }
