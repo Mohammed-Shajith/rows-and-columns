@@ -12,6 +12,7 @@ use super::{
 };
 
 pub(crate) mod background_open;
+pub(crate) mod background_save;
 mod clipboard;
 mod commands;
 mod editing;
@@ -84,6 +85,9 @@ impl SheetApp {
             #[cfg(not(target_arch = "wasm32"))]
             updates_rt: Default::default(),
             background_open: None,
+            background_save: None,
+            saving_sync: false,
+            quit_when_saved: false,
             ctx_time: 0.0,
         }
     }
@@ -134,6 +138,7 @@ impl SheetApp {
         // frames still see worker completion. `ui` and the desktop app no longer poll it.
         self.poll_printing(ctx);
         self.poll_background_open(ctx);
+        self.poll_background_save(ctx);
         self.guard_window_close(ctx);
         #[cfg(not(target_arch = "wasm32"))]
         updates_ui::tick(self, ctx);
@@ -195,6 +200,7 @@ impl SheetApp {
         let t0 = now_ms();
         // Rows&Columns G07: "Opening … — Esc to cancel" while a big file loads in the background.
         self.background_open_overlay(&ctx);
+        self.background_save_overlay(&ctx);
         // A script may have switched windows since the last frame.
         self.follow_active_window();
         text_box::before_ui(self, &ctx);

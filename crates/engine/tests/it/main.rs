@@ -26,6 +26,7 @@ mod pivot_unknown_func;
 mod pivotchart_link;
 mod range_fill_formats;
 mod row_autofit;
+mod save_prepared;
 mod sheet_name_quoting;
 mod sparse_clear_invalidation;
 mod stored_list_shape;

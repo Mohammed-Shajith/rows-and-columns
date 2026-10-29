@@ -408,7 +408,13 @@ pub fn handle(app: &mut SheetApp, ctx: &egui::Context, method: &str, p: &Json) -
                 (Ok(_), None) => ok(json!({"title": app.session.active().map(|d| d.display_title())})),
             }
         }
-        "app.save" => wrap(app.run("file.save", json!({"path": s("path")}))),
+        "app.save" => {
+            // Scripts expect the file on disk when the call returns (Rows&Columns G07).
+            app.saving_sync = true;
+            let r = app.run("file.save", json!({"path": s("path")}));
+            app.saving_sync = false;
+            wrap(r)
+        }
         "app.quit" => {
             // Programmatic calls never open dialogs: quitting from here doesn't ask about unsaved work.
             app.allow_close = true;

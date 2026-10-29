@@ -26,6 +26,12 @@ impl SheetApp {
         if matches!(id, "file.save" | "file.saveAs" | "file.saveBytes") {
             self.store_view_state();
         }
+        // Rows&Columns G07: a big workbook saves on a worker thread.
+        if id == "file.save"
+            && let Some(r) = self.try_background_save(&params)
+        {
+            return r;
+        }
         if matches!(
             id,
             "sheet.activate"

@@ -11,6 +11,7 @@ mod advanced_filter;
 mod argument_names;
 mod autosave_persist;
 mod background_open;
+mod background_save;
 mod borders;
 mod cell_editor_caret;
 mod cell_pictures;

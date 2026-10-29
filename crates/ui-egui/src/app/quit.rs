@@ -7,6 +7,12 @@ impl SheetApp {
         if self.native_windows || self.allow_close || !ctx.input(|i| i.viewport().close_requested()) {
             return;
         }
+        // Rows&Columns G07: a save still writing finishes first; the quit then goes on.
+        if self.background_save.is_some() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.quit_when_saved = true;
+            return;
+        }
         // A cell still being edited is part of the workbook, as for File › Close.
         if !self.commit_edit(0, 0, false, false) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
@@ -68,7 +74,10 @@ impl SheetApp {
                 if !self.commit_edit(0, 0, false, false) {
                     return false;
                 }
+                // Rows&Columns: immediate, so the close below sees the saved state.
+                self.saving_sync = true;
                 self.run_or_alert("file.save", json!({}));
+                self.saving_sync = false;
                 if self.session.active().is_some_and(|x| !x.is_dirty()) {
                     self.run_or_alert("file.close", json!({"force": true, "document": true}));
                     if quitting {

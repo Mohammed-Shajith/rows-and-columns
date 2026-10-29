@@ -184,6 +184,83 @@ fn save(s: &mut Session, p: &Json) -> Result<Json> {
     Ok(json!({"path": path, "bytes": bytes.len()}))
 }
 
+/// A save split in three for big workbooks (Rows&Columns G07): `prepare_save` takes a snapshot on
+/// the UI thread (cheap: copy-on-write), `SaveJob::run` turns it into bytes and writes the file on
+/// any thread, and `finish_save` marks the snapshot as the saved version. Edits made while the job
+/// runs keep the document dirty, because the snapshot is what reached the disk.
+pub struct PreparedSave {
+    pub doc: u64,
+    pub path: String,
+    kind: Option<crate::io::FileKind>,
+    /// What is written (links rebased for a new folder, when that applies).
+    write: std::sync::Arc<gridcraft_model::Workbook>,
+    /// The document's workbook at the snapshot: the saved version once the job succeeds.
+    saved: std::sync::Arc<gridcraft_model::Workbook>,
+    full_fidelity: bool,
+}
+
+/// The part of a save that runs on a worker thread.
+pub struct SaveJob {
+    path: String,
+    kind: Option<crate::io::FileKind>,
+    wb: std::sync::Arc<gridcraft_model::Workbook>,
+}
+
+impl SaveJob {
+    /// Serialises and writes the file; returns its size in bytes.
+    pub fn run(self) -> Result<usize> {
+        let bytes = match self.kind {
+            Some(kind) => crate::io::save_bytes_as(&self.wb, &self.path, kind)?,
+            None => crate::io::save_bytes(&self.wb, &self.path)?,
+        };
+        crate::io::write_file(&self.path, &bytes)?;
+        Ok(bytes.len())
+    }
+}
+
+impl PreparedSave {
+    pub fn job(&self) -> SaveJob {
+        SaveJob { path: self.path.clone(), kind: self.kind, wb: self.write.clone() }
+    }
+}
+
+/// Snapshots the active document for saving to `path` (or its own file). `None` when the save
+/// can't be split: no file yet (Save As must ask), or a PDF (a print, not a copy).
+pub fn prepare_save(s: &mut Session, path: Option<&str>) -> Result<Option<PreparedSave>> {
+    let Some(path) = path.map(str::to_string).or_else(|| s.active().and_then(|d| d.path.clone())) else { return Ok(None) };
+    if std::path::Path::new(&path).extension().and_then(std::ffi::OsStr::to_str).is_some_and(|e| e.eq_ignore_ascii_case("pdf")) {
+        return Ok(None);
+    }
+    let d = s.doc_mut()?;
+    let kind = crate::io::FileKind::from_path(&path).or(d.content_kind.filter(|_| d.path.as_deref() == Some(path.as_str())));
+    let full_fidelity = matches!(kind, Some(crate::io::FileKind::Xlsx | crate::io::FileKind::Json));
+    if full_fidelity {
+        // As in `save`: the new file is the workbook's own, so `CELL("filename")` reports it (#1489).
+        let file = crate::io::source_path(&path);
+        if d.wb.source_path != file {
+            std::sync::Arc::make_mut(&mut d.wb).source_path = file;
+        }
+    }
+    let saved = d.wb.clone();
+    let write = match crate::io::source_dir(&path).and_then(|f| gridcraft_xlsx::rebase_links(&d.wb, &f)) {
+        Some(rebased) => std::sync::Arc::new(rebased),
+        None => d.wb.clone(),
+    };
+    Ok(Some(PreparedSave { doc: d.uid, path, kind, write, saved, full_fidelity }))
+}
+
+/// Records a finished background save: a full-fidelity format makes the snapshot the saved version
+/// and the path the document's file, as `file.save` does. A document closed meanwhile is skipped.
+pub fn finish_save(s: &mut Session, prepared: PreparedSave, bytes: usize) -> Json {
+    if prepared.full_fidelity
+        && let Some(d) = s.docs.iter_mut().find(|d| d.uid == prepared.doc)
+    {
+        d.saved = prepared.saved;
+        d.path = Some(prepared.path.clone());
+    }
+    json!({"path": prepared.path, "bytes": bytes})
+}
+
 fn save_as(s: &mut Session, p: &Json) -> Result<Json> {
     if str_param(p, "path").is_none() {
         s.ui_requests.push(crate::UiRequest::Dialog("saveAs".into(), json!({})));

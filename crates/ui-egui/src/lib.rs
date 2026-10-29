@@ -303,6 +303,12 @@ pub struct SheetApp {
     updates_rt: updates_ui::Runtime,
     /// A big file being read on a worker thread (Rows&Columns G07).
     background_open: Option<app::background_open::BackgroundOpen>,
+    /// A big workbook being written on a worker thread (Rows&Columns G07).
+    background_save: Option<app::background_save::BackgroundSave>,
+    /// Saves run immediately (quit prompt, scripts) while set.
+    saving_sync: bool,
+    /// A quit is waiting for the background save.
+    quit_when_saved: bool,
     /// egui's clock at the start of this frame.
     ctx_time: f64,
 }
