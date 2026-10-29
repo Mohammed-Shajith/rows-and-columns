@@ -121,3 +121,13 @@ Clear Filter. Choices made:
 **2026-10-29.** GridCraft moved to 0.13.0. Rows&Columns keeps its own numbering (1.2 now); each
 merge resolves the version line in `Cargo.toml` in our favour, and `VERSION_LOG.xlsx` records which
 GridCraft version a release includes.
+
+### D18 · Day-month-year dates are decided per column
+**2026-10-29.** A single date like `03/04/2025` can't say whether it's day or month first, but a
+column comes from one source in one format. On CSV opening, a column is read **day first** when some
+date only works day first (`16-08-2023`) and none only month first (`08/16/2023`). Then its
+ambiguous dates follow (`7/8/2024` = 7 August). Columns with no evidence, or evidence both ways, read
+as before. The user's region (DMY for India) could later decide the unclear ones. Text to Columns
+gets Excel's explicit choice (Date: DMY…) for everything else, and re-reads dates *as shown*, which
+fixes columns already mis-read. Impossible dates never roll over (`DATE()` does; reading text must
+not).

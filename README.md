@@ -15,7 +15,7 @@ account.
 
 ## Status
 
-**Version 1.2** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
+**Version 1.3** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
 [`VERSION_LOG.xlsx`](VERSION_LOG.xlsx), and the reasoning behind them in
 [`DECISIONS.md`](DECISIONS.md).
 
@@ -29,9 +29,10 @@ What Rows&Columns changes from GridCraft so far:
 | Big files | Sheets with more than ~1,000,000 cells load completely (were cut at ~71,000 rows) | no silent data loss (1.1) |
 | Look | Dark theme colours measured from Excel for Mac | Excel-like dark mode (1.1) |
 | Filters | Excel-style filter menu: Auto Apply, "Choose One" conditions (contains, greater than, between, Top 10…), date columns as Year › Month › Day | (1.2) |
+| Dates | Text to Columns with Date: DMY/MDY/YMD…; CSV columns of day-month-year dates open correctly | (1.3) |
 
-Coming next: Text to Columns with date formats (DMY/MDY) and reading DMY dates correctly from CSV,
-keeping the window responsive during long operations, and new icons and dialogs.
+Coming next: keeping the window responsive during long operations (progress, Esc to cancel), and new
+icons and dialogs.
 
 ## Build and run (macOS)
 
