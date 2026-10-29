@@ -159,3 +159,16 @@ layers: the shared drawing helpers give every coloured shape subtle depth and dr
 bolder (lifts all icons at once), and the flattest icons (thin outlines in the text colour) are
 redrawn with filled colour, paper and badges. An icon sheet test (`RC_ICON_SHEET`) renders them in
 both themes for review. More icons can follow the same pattern.
+
+### D22 · Background saving keeps "unsaved" honest
+**2026-10-30.** Big workbooks (200,000+ cells) save on a worker thread. Copy-on-write makes the
+snapshot free, and the snapshot (not the live workbook) becomes the saved version, so anything
+typed during the write is still marked unsaved. Saves that something waits for stay immediate: the
+quit prompt's Save (the close right after must see the saved state) and scripted saves. Quitting
+while a save runs waits for it, then goes through the normal unsaved-changes check.
+
+### D23 · A missing narrow font gets a narrow substitute
+**2026-10-30.** Excel files default to Aptos Narrow, which a Mac without Office fonts doesn't have.
+Falling back to a regular-width font made numbers overflow (2E+06) and text clip early. A missing
+font whose name says Narrow or Condensed now draws with an installed narrow font (Arial Narrow
+ships with macOS). Microsoft's Aptos files themselves are never read or bundled.

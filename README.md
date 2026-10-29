@@ -15,7 +15,7 @@ account.
 
 ## Status
 
-**Version 1.6** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
+**Version 1.7** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
 [`VERSION_LOG.xlsx`](VERSION_LOG.xlsx), and the reasoning behind them in
 [`DECISIONS.md`](DECISIONS.md).
 
@@ -31,8 +31,10 @@ What Rows&Columns changes from GridCraft so far:
 | Filters | Excel-style filter menu: Auto Apply, "Choose One" conditions (contains, greater than, between, Top 10…), date columns as Year › Month › Day | (1.2) |
 | Dates | Text to Columns with Date: DMY/MDY/YMD…; CSV columns of day-month-year dates open correctly | (1.3) |
 | Big files | Files of 2 MB+ open in the background with "Opening… — Esc to cancel"; Remove Duplicates ~7 s → ~2 s on 350k rows | no frozen window (1.4) |
+| Saving | Big workbooks save in the background ("Saving… N s"); quitting waits for the save | (1.7) |
+| Fonts | Excel's Aptos Narrow draws with an installed narrow font when missing, so numbers fit (no more 2E+06) | (1.7) |
 
-Coming next: saving big files in the background, progress for other long commands, and more icons redrawn.
+Coming next: PivotTable date grouping from Excel files, progress for other long commands, and more icons redrawn.
 
 ## Build and run (macOS)
 
