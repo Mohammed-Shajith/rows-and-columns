@@ -354,3 +354,20 @@ fn fedora_package_folders_are_searched_after_the_other_linux_layouts() {
     let noto = mono.iter().position(|p| p == "/usr/share/fonts/google-noto-vf/NotoSansMono[wght].ttf");
     assert!(noto.is_some() && noto.unwrap_or(0) + 1 == mono.len(), "Fedora's default Noto Sans Mono must be the last resort: {mono:?}");
 }
+
+/// Rows&Columns G11: a missing narrow workbook font is drawn with an installed narrow face, so
+/// numbers fit their columns as in Excel (wider fallback text showed 2403607 as 3E+06).
+#[test]
+fn a_missing_narrow_font_binds_an_installed_narrow_face() {
+    let has_narrow = font_setup::NARROW_SUBSTITUTES.iter().any(|f| !crate::fonts::faces_of(f).is_empty());
+    let defs = font_definitions_with(Language::En, &["Aptos Narrow".to_string(), "Calibri Light".to_string()]);
+    let role = egui::FontFamily::Name(crate::fonts::role_key("Aptos Narrow", false, false).into());
+    if !has_narrow {
+        return; // no narrow face on this machine (e.g. a minimal CI image)
+    }
+    assert!(defs.families.contains_key(&role), "Aptos Narrow should be bound to a narrow substitute");
+    let wide = egui::FontFamily::Name(crate::fonts::role_key("Calibri Light", false, false).into());
+    let calibri_installed = !crate::fonts::installed_among(&["Calibri Light".to_string()]).is_empty();
+    assert_eq!(defs.families.contains_key(&wide), calibri_installed, "only narrow names get a substitute");
+    assert!(font_setup::is_narrow_name("Roboto Condensed") && !font_setup::is_narrow_name("Arial"));
+}

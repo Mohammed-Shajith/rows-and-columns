@@ -41,6 +41,16 @@ pub const SERIF: &str = "serif";
 
 pub const MONO: &str = "mono";
 
+/// Installed narrow families tried, in order, for a workbook's narrow font that isn't installed.
+pub(super) const NARROW_SUBSTITUTES: [&str; 5] =
+    ["Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", "PT Sans Narrow", "DejaVu Sans Condensed"];
+
+/// A font name that asks for narrow letters ("Aptos Narrow", "Roboto Condensed").
+pub(super) fn is_narrow_name(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    n.contains("narrow") || n.contains("condensed")
+}
+
 pub fn ui_font(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name(UI.into()))
 }
@@ -448,8 +458,17 @@ fn font_definitions_impl(language: crate::i18n::Language, used: &[String], syste
     }
     // Installed workbook fonts, so a cell's chosen font actually renders in it.
     if system {
-        for family in crate::fonts::installed_among(used) {
-            bound.extend(crate::fonts::bind_family(&mut fonts, &family));
+        let installed = crate::fonts::installed_among(used);
+        for family in &installed {
+            bound.extend(crate::fonts::bind_family(&mut fonts, family));
+        }
+        // Rows&Columns G11: a missing narrow font (Excel's default Aptos Narrow on a Mac without
+        // Office fonts) gets an installed narrow face, not the regular-width cell font. Wider
+        // text made 7-digit numbers overflow their columns and show as 3E+06.
+        for name in used.iter().filter(|n| !installed.contains(n) && is_narrow_name(n)) {
+            if let Some(faces) = NARROW_SUBSTITUTES.iter().map(|f| crate::fonts::faces_of(f)).find(|f| !f.is_empty()) {
+                bound.extend(crate::fonts::bind_faces(&mut fonts, name, &faces));
+            }
         }
     }
     // Interface text (formula bar, name box, dialogs) falls back to the cell font before the
