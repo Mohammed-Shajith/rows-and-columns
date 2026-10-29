@@ -131,3 +131,15 @@ as before. The user's region (DMY for India) could later decide the unclear ones
 gets Excel's explicit choice (Date: DMY…) for everything else, and re-reads dates *as shown*, which
 fixes columns already mis-read. Impossible dates never roll over (`DATE()` does; reading text must
 not).
+
+### D19 · Long work moves off the screen thread one piece at a time
+**2026-10-29.** G07 asked for heavy work in the background with progress and Esc to cancel.
+Measured first on a 350k × 12 file: opening (~2 s) and Remove Duplicates (~7 s) were the worst.
+- Remove Duplicates was mostly wasted work (a #SPILL! scan per changed cell), so it was **made
+  fast** (~2 s) rather than moved.
+- **Opening** is split into a session-free read-and-parse that runs on a worker thread and a quick
+  adoption step (`file.openPrepared`) that runs as a normal command, under the crash guard. Only
+  files of 2 MB or more take the background path, so small files and every scripted, CLI or
+  control-channel open behave exactly as before. Esc stops waiting; the worker's result is dropped.
+- **Saving** stays on the screen thread for now (~1 s at this size): a background save must be
+  finished before quitting, which touches the Save / Don't Save / Cancel flow. It's next.
