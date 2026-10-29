@@ -143,3 +143,11 @@ Measured first on a 350k × 12 file: opening (~2 s) and Remove Duplicates (~7 s)
   control-channel open behave exactly as before. Esc stops waiting; the worker's result is dropped.
 - **Saving** stays on the screen thread for now (~1 s at this size): a background save must be
   finished before quitting, which touches the Save / Don't Save / Cancel flow. It's next.
+
+### D20 · Our own checkbox and primary button; icons chosen with the owner
+**2026-10-29.** egui can't fill a checkbox by its ticked state, and its theme hook for that is
+experimental, so Rows&Columns draws its own (`rc_widgets.rs`) with the same accessibility role,
+label and state, and every checkbox uses it. Primary buttons get Excel's measured green with white
+text. The 121 code-drawn icons are not redrawn yet: their style is a matter of taste, so the owner
+picks a direction from samples first (redraw ours in a richer style, or adopt an open-source set
+under a licence that allows it; never Microsoft's).
