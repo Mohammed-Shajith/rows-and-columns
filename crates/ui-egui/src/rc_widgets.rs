@@ -64,3 +64,9 @@ pub fn tri_checkbox(ui: &mut Ui, checked: &mut bool, text: impl Into<WidgetText>
     }
     response
 }
+
+/// A dialog's main button (OK, Solve) like Excel's: filled green with white text.
+pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
+    let t = Tokens::get(ui.ctx());
+    ui.add(egui::Button::new(egui::RichText::new(format!("   {text}   ")).color(Color32::WHITE)).fill(tick_fill(&t)).corner_radius(5.0))
+}

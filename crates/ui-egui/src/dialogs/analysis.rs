@@ -284,8 +284,7 @@ pub(super) fn solver(ui: &mut egui::Ui, d: &mut Dialog, confirm: &mut bool, open
     );
     ui.add_space(8.0);
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-        let t = crate::theme::Tokens::get(ui.ctx());
-        let solve = ui.add(egui::Button::new(egui::RichText::new("  Solve  ").color(t.on_accent)).fill(t.accent));
+        let solve = crate::rc_widgets::primary_button(ui, "Solve");
         if solve.clicked() && !text(d, "objective").trim().is_empty() {
             *confirm = true;
         }
