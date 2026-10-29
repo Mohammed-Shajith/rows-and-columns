@@ -261,6 +261,8 @@ pub fn read_csv(bytes: &[u8], opts: &CsvOptions) -> Result<Workbook, IoError> {
     let mut sheet = Sheet::new("Sheet1");
     let mut styles = std::mem::take(&mut wb.styles);
     let mut fmt_cache: Vec<(&'static str, StyleId)> = vec![];
+    // Rows&Columns (G02): columns of day-month-year dates are read day first (see `day_first_columns`).
+    let day_first = if opts.parse_values { day_first_columns(&text, delim, quote) } else { vec![] };
     let mut row: u32 = 0;
     parse_records(&text, delim, quote, |rec| {
         if row >= MAX_ROWS {
@@ -275,7 +277,19 @@ pub fn read_csv(bytes: &[u8], opts: &CsvOptions) -> Result<Workbook, IoError> {
                 continue;
             }
             let pos = CellRef::new(row, col as u32);
-            let cell = if opts.parse_values {
+            let dmy = if day_first.get(col).copied().unwrap_or(false) { day_first_serial(&f, opts.date_system) } else { None };
+            let cell = if let Some(serial) = dmy {
+                let code = "dd/mm/yyyy";
+                let style = match fmt_cache.iter().find(|(c, _)| *c == code) {
+                    Some((_, id)) => *id,
+                    None => {
+                        let id = styles.derive(StyleId::DEFAULT, |s| s.num_fmt = NumFmt::new(code));
+                        fmt_cache.push((code, id));
+                        id
+                    }
+                };
+                Cell { value: Value::Number(serial), formula: None, style }
+            } else if opts.parse_values {
                 let p = parse_input(&f, opts.date_system);
                 let style = match p.format {
                     Some(code) => match fmt_cache.iter().find(|(c, _)| *c == code) {
@@ -300,6 +314,62 @@ pub fn read_csv(bytes: &[u8], opts: &CsvOptions) -> Result<Workbook, IoError> {
     wb.styles = styles;
     wb.sheets = vec![Arc::new(sheet)];
     Ok(wb)
+}
+
+/// A numeric date with day and month in either order and nothing else: "16-08-2023", "7/8/24",
+/// "01.02.2025". Returns the first two numbers and the year (two-digit years: below 30 → 20xx).
+fn numeric_date(f: &str) -> Option<(i64, i64, i64)> {
+    let t = f.trim();
+    let sep = t.chars().find(|c| matches!(c, '/' | '-' | '.'))?;
+    let mut parts = t.split(sep);
+    let (a, b, y) = (parts.next()?, parts.next()?, parts.next()?);
+    if parts.next().is_some() || !(1..=2).contains(&a.len()) || !(1..=2).contains(&b.len()) || !matches!(y.len(), 2 | 4) {
+        return None;
+    }
+    if ![a, b, y].iter().all(|p| p.bytes().all(|c| c.is_ascii_digit())) {
+        return None;
+    }
+    let (a, b, n): (i64, i64, i64) = (a.parse().ok()?, b.parse().ok()?, y.parse().ok()?);
+    let year = if y.len() == 2 { if n < 30 { 2000 + n } else { 1900 + n } } else { n };
+    Some((a, b, year))
+}
+
+/// `f` as a day-month-year date serial, if it is one (no roll-over: 31-02-2024 is not a date).
+fn day_first_serial(f: &str, sys: gridcraft_core::date::DateSystem) -> Option<f64> {
+    let (d, m, y) = numeric_date(f)?;
+    let serial = gridcraft_core::date::serial_from_ymd(sys, y, m, d)?;
+    let back = gridcraft_core::date::datetime_from_serial(sys, serial)?;
+    (i64::from(back.year) == y && i64::from(back.month) == m && i64::from(back.day) == d).then_some(serial)
+}
+
+/// Which columns hold day-month-year dates, decided per column (a column comes from one source in
+/// one format): some date reads only day first ("16-08-2023": there is no month 16) and none reads
+/// only month first ("08/16/2023"). Then every date in it is read day first, the ambiguous ones
+/// ("7/8/2024" = 7 August) included. Columns with no evidence, or evidence both ways, are read as
+/// before. Excel reads them all month first in a US locale, mangling these columns.
+fn day_first_columns(text: &str, delim: char, quote: char) -> Vec<bool> {
+    // (day-first-only fields, month-first-only fields) per column.
+    let mut votes: Vec<(u32, u32)> = Vec::new();
+    let mut rows: u32 = 0;
+    parse_records(text, delim, quote, |rec| {
+        for (col, f) in rec.iter().enumerate().take(MAX_COLS as usize) {
+            if let Some((a, b, _)) = numeric_date(f) {
+                if votes.len() <= col {
+                    votes.resize(col + 1, (0, 0));
+                }
+                if let Some(v) = votes.get_mut(col) {
+                    if a > 12 && b <= 12 {
+                        v.0 = v.0.saturating_add(1);
+                    } else if b > 12 && a <= 12 {
+                        v.1 = v.1.saturating_add(1);
+                    }
+                }
+            }
+        }
+        rows += 1;
+        rows < MAX_ROWS
+    });
+    votes.into_iter().map(|(dmy, mdy)| dmy > 0 && mdy == 0).collect()
 }
 
 /// Writes the sheet as CSV from A1 to the end of its used range, so leading empty columns and rows

@@ -326,3 +326,59 @@ fn parser_stops_collecting_fields_at_max_cols() {
     });
     assert_eq!(lens, vec![MAX_COLS as usize]);
 }
+
+/// Rows&Columns G02: a column of day-month-year dates is read day first, decided per column.
+fn ymd(wb: &Workbook, r: u32, c: u32) -> Option<(i32, u32, u32)> {
+    let n = v(wb, r, c).as_f64()?;
+    let t = gridcraft_core::date::datetime_from_serial(wb.date_system, n)?;
+    Some((t.year, t.month, t.day))
+}
+
+#[test]
+fn a_day_first_column_is_read_day_first() {
+    // The user's acquisitions export: some dates only make sense day first (16-08-2023), so the
+    // ambiguous ones (7/8/2024) are day first too.
+    let src = "DATE,CITY\n7/8/2024,Ahmedabad\n16-08-2023,Delhi\n11/3/2023,Pune\n30-03-2022,Surat\n,Agra\n";
+    let wb = read_csv(src.as_bytes(), &CsvOptions::default()).unwrap();
+    assert_eq!(ymd(&wb, 1, 0), Some((2024, 8, 7)), "7 August, not 8 July");
+    assert_eq!(ymd(&wb, 2, 0), Some((2023, 8, 16)), "a date, not text");
+    assert_eq!(ymd(&wb, 3, 0), Some((2023, 3, 11)));
+    assert_eq!(ymd(&wb, 4, 0), Some((2022, 3, 30)));
+    assert_eq!(v(&wb, 5, 0), Value::Empty);
+    assert_eq!(v(&wb, 1, 1), Value::text("Ahmedabad"));
+    let style = wb.sheet(0).unwrap().style_id(CellRef::new(1, 0));
+    assert_eq!(wb.styles.get(style).num_fmt.as_str(), "dd/mm/yyyy");
+}
+
+#[test]
+fn month_first_and_unclear_columns_read_as_before() {
+    // Only month first is possible (08/16/2023): unchanged. Nothing decides (all parts ≤ 12): unchanged.
+    let src = "US,UNCLEAR,BOTH\n08/16/2023,7/8/2024,16/08/2023\n7/8/2024,3/4/2025,08/16/2023\n";
+    let wb = read_csv(src.as_bytes(), &CsvOptions::default()).unwrap();
+    let before = read_csv(b"A\n7/8/2024\n3/4/2025\n", &CsvOptions::default()).unwrap();
+    assert_eq!(ymd(&wb, 1, 0), Some((2023, 8, 16)));
+    assert_eq!(ymd(&wb, 2, 0), ymd(&before, 1, 0), "US column: as the default reader");
+    assert_eq!(ymd(&wb, 1, 1), ymd(&before, 1, 0), "unclear column: as the default reader");
+    assert_eq!(ymd(&wb, 2, 1), ymd(&before, 2, 0));
+    // Evidence both ways (16/08 and 08/16): read as the default reader does (16/08/2023 stays text).
+    assert_eq!(v(&wb, 1, 2), Value::text("16/08/2023"));
+}
+
+#[test]
+fn impossible_day_first_dates_stay_as_written() {
+    let src = "D\n16-08-2023\n31-02-2024\n";
+    let wb = read_csv(src.as_bytes(), &CsvOptions::default()).unwrap();
+    assert_eq!(ymd(&wb, 1, 0), Some((2023, 8, 16)));
+    assert_eq!(
+        v(&wb, 2, 0),
+        read_csv(b"X\n31-02-2024\n", &CsvOptions::default()).unwrap().sheet(0).unwrap().value(CellRef::new(1, 0)),
+        "no 31 February"
+    );
+}
+
+#[test]
+fn unparsed_import_keeps_text() {
+    let opts = CsvOptions { parse_values: false, ..CsvOptions::default() };
+    let wb = read_csv(b"D\n16-08-2023\n", &opts).unwrap();
+    assert_eq!(v(&wb, 1, 0), Value::text("16-08-2023"));
+}
