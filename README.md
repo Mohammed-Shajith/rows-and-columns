@@ -15,7 +15,7 @@ account.
 
 ## Status
 
-**Version 1.8** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
+**Version 1.9** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
 [`VERSION_LOG.xlsx`](VERSION_LOG.xlsx), and the reasoning behind them in
 [`DECISIONS.md`](DECISIONS.md).
 
