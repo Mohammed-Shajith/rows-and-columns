@@ -7,7 +7,8 @@
 // unit tests compile here too without a harness to run them).
 #[cfg(target_os = "macos")]
 #[path = "../src/native_menu.rs"]
-#[allow(unused_imports, dead_code)]
+// The test uses part of the module; the rest is exercised by the app (macOS-only lints, missed on Linux CI).
+#[allow(dead_code, unused_imports)]
 mod native_menu;
 
 #[cfg(target_os = "macos")]
