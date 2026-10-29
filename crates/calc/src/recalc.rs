@@ -240,6 +240,10 @@ impl Calc {
         }
         let mut seeds: Vec<Key> = changed.to_vec();
         let mut emptied: Vec<Key> = Vec::new();
+        // Each sheet's #SPILL! anchors, found once: scanning a 64×64 block around every changed cell
+        // cost billions of cell visits when a command changed millions of cells (Rows&Columns: Remove
+        // Duplicates on 350k × 12 took ~7 s, almost all of it here). Usually there are none.
+        let mut spill_errors: std::collections::HashMap<usize, Vec<CellRef>> = std::collections::HashMap::new();
         // Typing into (or clearing) a cell a dynamic array spills over (or would spill over)
         // re-evaluates the anchor, which may now be blocked or unblocked.
         for &k in changed {
@@ -249,8 +253,12 @@ impl Calc {
                         seeds.push((k.0, *anchor));
                     }
                 }
-                for (c, cell) in sh.cells.iter_range(RangeRef::new(CellRef::new(k.1.row.saturating_sub(64), k.1.col.saturating_sub(64)), k.1)) {
-                    if c != k.1 && cell.value == Value::Error(CellError::Spill) {
+                let blocked = spill_errors
+                    .entry(k.0)
+                    .or_insert_with(|| sh.cells.iter().filter(|(_, cell)| cell.value == Value::Error(CellError::Spill)).map(|(c, _)| c).collect());
+                let (top, left) = (k.1.row.saturating_sub(64), k.1.col.saturating_sub(64));
+                for &c in blocked.iter() {
+                    if c != k.1 && (top..=k.1.row).contains(&c.row) && (left..=k.1.col).contains(&c.col) {
                         seeds.push((k.0, c));
                     }
                 }
