@@ -151,3 +151,11 @@ label and state, and every checkbox uses it. Primary buttons get Excel's measure
 text. The 121 code-drawn icons are not redrawn yet: their style is a matter of taste, so the owner
 picks a direction from samples first (redraw ours in a richer style, or adopt an open-source set
 under a licence that allows it; never Microsoft's).
+
+### D21 · Icons: our own drawings, made richer
+**2026-10-30.** The owner chose to keep Rows&Columns' own code-drawn icons and make them livelier,
+rather than adopt an open-source set (Phosphor, Tabler) or anything resembling Microsoft's. Two
+layers: the shared drawing helpers give every coloured shape subtle depth and draw lines slightly
+bolder (lifts all icons at once), and the flattest icons (thin outlines in the text colour) are
+redrawn with filled colour, paper and badges. An icon sheet test (`RC_ICON_SHEET`) renders them in
+both themes for review. More icons can follow the same pattern.

@@ -15,7 +15,7 @@ account.
 
 ## Status
 
-**Version 1.5** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
+**Version 1.6** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
 [`VERSION_LOG.xlsx`](VERSION_LOG.xlsx), and the reasoning behind them in
 [`DECISIONS.md`](DECISIONS.md).
 
@@ -27,12 +27,12 @@ What Rows&Columns changes from GridCraft so far:
 | Filters | The cursor turns into a pointing hand over filter buttons | matches Excel |
 | Name | Rows&Columns: its own app name, bundle id, settings folder and update channel | runs side by side with GridCraft |
 | Big files | Sheets with more than ~1,000,000 cells load completely (were cut at ~71,000 rows) | no silent data loss (1.1) |
-| Look | Dark theme colours measured from Excel for Mac; Excel-style green checkboxes and OK buttons | Excel-like dark mode (1.1, 1.5) |
+| Look | Dark theme colours measured from Excel for Mac; Excel-style green checkboxes and OK buttons; livelier filled icons | Excel-like dark mode (1.1, 1.5, 1.6) |
 | Filters | Excel-style filter menu: Auto Apply, "Choose One" conditions (contains, greater than, between, Top 10…), date columns as Year › Month › Day | (1.2) |
 | Dates | Text to Columns with Date: DMY/MDY/YMD…; CSV columns of day-month-year dates open correctly | (1.3) |
 | Big files | Files of 2 MB+ open in the background with "Opening… — Esc to cancel"; Remove Duplicates ~7 s → ~2 s on 350k rows | no frozen window (1.4) |
 
-Coming next: saving big files in the background, progress for other long commands, and a new icon set.
+Coming next: saving big files in the background, progress for other long commands, and more icons redrawn.
 
 ## Build and run (macOS)
 
