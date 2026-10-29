@@ -101,3 +101,23 @@ ribbon, headings, selection, dialogs, gridlines), not from guesses. Colour value
 not Microsoft's artwork; no icons, images or theme files were copied. One new colour setting,
 `header_all_text`, was needed because Excel uses dark letters on a fully selected heading and light
 letters on a partly selected one. Every text/background pair stays in the WCAG contrast test.
+
+### D16 · The filter menu: Excel's layout, our own file
+**2026-10-29.** The AutoFilter dropdown (G06, G12) follows Excel for Mac's popover: column name
+as title, side-by-side sort, "Choose One" conditions, search, values, Auto Apply, Apply Filter and
+Clear Filter. Choices made:
+- **Auto Apply is on by default**, as in Excel, and remembered while the app is open.
+- **Conditions open inline** inside the menu rather than as a separate dropdown, which the app
+  would treat as a click outside and close the menu.
+- **Date columns become a Year › Month › Day tree** when every non-blank value is a date. Ticks
+  still apply as an ordinary value filter, so files stay readable by Excel and GridCraft.
+- **Values are read once per opening** and drawn a screenful at a time, so huge columns stay
+  smooth.
+- **The code lives in a new file** (`grid/filter_popup.rs`), with GridCraft's menu function handing
+  over to it, so GridCraft's later changes to the old menu merge with little conflict (D13).
+- Not yet: filter and sort by colour.
+
+### D17 · Our version numbers stay ours
+**2026-10-29.** GridCraft moved to 0.13.0. Rows&Columns keeps its own numbering (1.2 now); each
+merge resolves the version line in `Cargo.toml` in our favour, and `VERSION_LOG.xlsx` records which
+GridCraft version a release includes.
