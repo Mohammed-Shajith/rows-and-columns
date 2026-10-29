@@ -15,7 +15,7 @@ account.
 
 ## Status
 
-**Version 1.7** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
+**Version 1.8** (based on GridCraft 0.13.0 plus newer upstream fixes). Every change is listed in
 [`VERSION_LOG.xlsx`](VERSION_LOG.xlsx), and the reasoning behind them in
 [`DECISIONS.md`](DECISIONS.md).
 
@@ -33,8 +33,9 @@ What Rows&Columns changes from GridCraft so far:
 | Big files | Files of 2 MB+ open in the background with "Opening… — Esc to cancel"; Remove Duplicates ~7 s → ~2 s on 350k rows | no frozen window (1.4) |
 | Saving | Big workbooks save in the background ("Saving… N s"); quitting waits for the save | (1.7) |
 | Fonts | Excel's Aptos Narrow draws with an installed narrow font when missing, so numbers fit (no more 2E+06) | (1.7) |
+| Pivots | Excel's automatic date grouping (Years › Quarters › Months) opens without warnings | (1.8) |
 
-Coming next: PivotTable date grouping from Excel files, progress for other long commands, and more icons redrawn.
+Coming next: progress for other long commands, filter and sort by colour, and more icons redrawn.
 
 ## Build and run (macOS)
 
