@@ -43,7 +43,7 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
                     f["areas"].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect()).unwrap_or_default();
                 let mut on = !areas.is_empty();
                 let numeric = f["numeric"].as_bool().unwrap_or(false);
-                let r = ui.checkbox(&mut on, egui::RichText::new(&fname).font(theme::ui_font(13.0)));
+                let r = crate::rc_widgets::checkbox(ui, &mut on, egui::RichText::new(&fname).font(theme::ui_font(13.0)));
                 if r.changed() {
                     let res = if on {
                         app.run("pivot.addField", json!({"pivot": name, "field": fname, "area": if numeric { "values" } else { "rows" }}))

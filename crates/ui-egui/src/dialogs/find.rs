@@ -31,9 +31,9 @@ pub(super) fn find(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog) {
     let mut whole = d.values.get("wholeCell").and_then(Json::as_bool).unwrap_or(false);
     let mut wb = d.values.get("within").and_then(Json::as_str) == Some("workbook");
     ui.horizontal(|ui| {
-        ui.checkbox(&mut case, "Match case");
-        ui.checkbox(&mut whole, "Match entire cell contents");
-        ui.checkbox(&mut wb, "Within workbook");
+        crate::rc_widgets::checkbox(ui, &mut case, "Match case");
+        crate::rc_widgets::checkbox(ui, &mut whole, "Match entire cell contents");
+        crate::rc_widgets::checkbox(ui, &mut wb, "Within workbook");
     });
     d.values.insert("what".into(), json!(what));
     d.values.insert("with".into(), json!(with));

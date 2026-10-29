@@ -25,13 +25,13 @@ pub(super) fn view(app: &mut SheetApp, ui: &mut Ui) {
     ui.vertical(|ui| {
         // Rulers exist only in Page Layout view.
         let mut ruler = !app.session.hide_ruler;
-        let ruler_resp = ui.add_enabled(page_layout, egui::Checkbox::new(&mut ruler, lang.tr("Ruler")));
+        let ruler_resp = ui.add_enabled_ui(page_layout, |ui| crate::rc_widgets::checkbox(ui, &mut ruler, lang.tr("Ruler"))).inner;
         control_keytip(app, ui, &ruler_resp, "view.ruler");
         if ruler_resp.changed() {
             act(app, "view.ruler", json!({"on": ruler}));
         }
         let mut g = s.0;
-        let resp = ui.checkbox(&mut g, lang.tr("Gridlines"));
+        let resp = crate::rc_widgets::checkbox(ui, &mut g, lang.tr("Gridlines"));
         control_keytip(app, ui, &resp, "view.gridlines");
         if resp.changed() {
             act(app, "view.gridlines", json!({"on": g}));
@@ -40,13 +40,13 @@ pub(super) fn view(app: &mut SheetApp, ui: &mut Ui) {
     ui.add_space(6.0);
     ui.vertical(|ui| {
         let mut fb = app.session.prefs.formula_bar;
-        let resp = ui.checkbox(&mut fb, lang.tr("Formula Bar"));
+        let resp = crate::rc_widgets::checkbox(ui, &mut fb, lang.tr("Formula Bar"));
         control_keytip(app, ui, &resp, "view.formulaBar");
         if resp.changed() || invoke(app, "view.formulaBar") {
             act(app, "view.formulaBar", json!({"on": checkbox_on(resp.changed(), fb)}));
         }
         let mut h = s.1;
-        let resp = ui.checkbox(&mut h, lang.tr("Headings"));
+        let resp = crate::rc_widgets::checkbox(ui, &mut h, lang.tr("Headings"));
         control_keytip(app, ui, &resp, "view.headings");
         if resp.changed() {
             act(app, "view.headings", json!({"on": h}));
@@ -121,7 +121,7 @@ pub(super) fn view(app: &mut SheetApp, ui: &mut Ui) {
             .labelled_by(label_response.id);
         let mut animations = app.ui.animations;
         let hint = lang.tr("Glide the selection outline to the cell you move to instead of jumping there");
-        if ui.checkbox(&mut animations, lang.tr("Animations")).on_hover_text(hint).changed() {
+        if crate::rc_widgets::checkbox(ui, &mut animations, lang.tr("Animations")).on_hover_text(hint).changed() {
             act(app, "view.animations", json!({"on": animations}));
         }
     });

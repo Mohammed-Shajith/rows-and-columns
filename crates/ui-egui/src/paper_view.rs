@@ -913,19 +913,19 @@ pub fn ribbon_tab(app: &mut SheetApp, ui: &mut egui::Ui) {
         });
     ui.vertical(|ui| {
         let (mut f, mut o) = (first, odd_even);
-        if ui.checkbox(&mut f, tr(app, "Different First Page")).changed() {
+        if crate::rc_widgets::checkbox(ui, &mut f, tr(app, "Different First Page")).changed() {
             set_option(app, "differentFirst", f);
         }
-        if ui.checkbox(&mut o, tr(app, "Different Odd & Even Pages")).changed() {
+        if crate::rc_widgets::checkbox(ui, &mut o, tr(app, "Different Odd & Even Pages")).changed() {
             set_option(app, "differentOddEven", o);
         }
     });
     ui.vertical(|ui| {
         let (mut sd, mut am) = (scale_doc, align);
-        if ui.checkbox(&mut sd, tr(app, "Scale with Document")).changed() {
+        if crate::rc_widgets::checkbox(ui, &mut sd, tr(app, "Scale with Document")).changed() {
             set_option(app, "scaleWithDoc", sd);
         }
-        if ui.checkbox(&mut am, tr(app, "Align with Page Margins")).changed() {
+        if crate::rc_widgets::checkbox(ui, &mut am, tr(app, "Align with Page Margins")).changed() {
             set_option(app, "alignWithMargins", am);
         }
     });

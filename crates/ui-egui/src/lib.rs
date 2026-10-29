@@ -62,6 +62,7 @@ pub use clock::{monotonic_ms, now_ms};
 pub use services::{Chrome, Inbox, Services};
 pub use state::{NoticeKind, OpenWindow, SaveAnswer, SheetView};
 pub mod desktop_theme;
+pub mod rc_widgets;
 
 /// The app's display name: window title, menus, messages and About. Rows&Columns is a modified
 /// version of GridCraft (`UPSTREAM_REPO_URL`); internal crate and binary names stay `gridcraft*`.

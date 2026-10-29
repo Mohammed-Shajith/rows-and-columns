@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
-use egui::{Align, Button, Checkbox, Layout, RichText, ScrollArea, Sense, TextEdit, vec2};
+use egui::{Align, Button, Layout, RichText, ScrollArea, Sense, TextEdit, vec2};
 use gridcraft_engine::cmd::data::{FilterItem, filter_items};
 use gridcraft_engine::core::date::DateSystem;
 use gridcraft_engine::core::{CellRef, Value, col_to_letters};
@@ -234,7 +234,7 @@ impl State {
 fn group_box(ui: &mut egui::Ui, on: usize, total: usize, label: impl Into<egui::WidgetText>) -> Option<bool> {
     let all = total > 0 && on == total;
     let mut v = all;
-    let r = ui.add(Checkbox::new(&mut v, label).indeterminate(on > 0 && on < total));
+    let r = crate::rc_widgets::tri_checkbox(ui, &mut v, label, on > 0 && on < total);
     r.clicked().then_some(!all)
 }
 
@@ -243,7 +243,16 @@ fn arrow(ui: &mut egui::Ui, open: bool, name: &str) -> bool {
     let (_, r) = ui.allocate_exact_size(vec2(14.0, 18.0), Sense::click());
     let label = format!("{} {name}", if open { "Collapse" } else { "Expand" });
     r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label.clone()));
-    egui::collapsing_header::paint_default_icon(ui, if open { 1.0 } else { 0.0 }, &r);
+    // A small grey chevron, as in Excel: › closed, ⌄ open.
+    let t = crate::theme::Tokens::get(ui.ctx());
+    let c = r.rect.center();
+    let color = if r.hovered() { t.text } else { t.text_dim };
+    let pts = if open {
+        vec![egui::pos2(c.x - 3.5, c.y - 1.5), egui::pos2(c.x, c.y + 2.0), egui::pos2(c.x + 3.5, c.y - 1.5)]
+    } else {
+        vec![egui::pos2(c.x - 1.5, c.y - 3.5), egui::pos2(c.x + 2.0, c.y), egui::pos2(c.x - 1.5, c.y + 3.5)]
+    };
+    ui.painter().add(egui::Shape::line(pts, egui::Stroke::new(1.5, color)));
     r.clicked()
 }
 
@@ -261,7 +270,7 @@ fn flat_list(ui: &mut egui::Ui, st: &mut State) -> bool {
                 let Some(&i) = visible.get(k) else { continue };
                 let label = st.items.get(i).map(|it| it.text.clone()).unwrap_or_default();
                 if let Some(c) = st.checks.get_mut(i)
-                    && ui.checkbox(c, label).changed()
+                    && crate::rc_widgets::checkbox(ui, c, label).changed()
                 {
                     changed = true;
                 }
@@ -330,7 +339,7 @@ fn date_tree(ui: &mut egui::Ui, st: &mut State) -> bool {
                     ui.horizontal(|ui| {
                         ui.add_space(50.0);
                         if let Some(c) = st.checks.get_mut(*i)
-                            && ui.checkbox(c, format!("{d:02}")).changed()
+                            && crate::rc_widgets::checkbox(ui, c, format!("{d:02}")).changed()
                         {
                             changed = true;
                         }
@@ -341,7 +350,7 @@ fn date_tree(ui: &mut egui::Ui, st: &mut State) -> bool {
         for i in others {
             let label = st.items.get(i).map(|it| it.text.clone()).unwrap_or_default();
             if let Some(c) = st.checks.get_mut(i)
-                && ui.checkbox(c, label).changed()
+                && crate::rc_widgets::checkbox(ui, c, label).changed()
             {
                 changed = true;
             }
@@ -449,7 +458,7 @@ pub(super) fn show(app: &mut SheetApp, ui: &mut egui::Ui, col: u32, at: egui::Po
             }
 
             ui.add_space(4.0);
-            ui.checkbox(&mut auto, "Auto Apply");
+            crate::rc_widgets::checkbox(ui, &mut auto, "Auto Apply");
             ui.separator();
             let cond_ready = st.condition_params(col).is_some();
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

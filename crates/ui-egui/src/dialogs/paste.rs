@@ -45,7 +45,7 @@ pub(super) fn paste_special(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialo
         egui::Grid::new("paste_special_checks").num_columns(2).min_col_width(200.0).spacing(vec2(16.0, 4.0)).show(ui, |ui| {
             for (key, label) in [("skipBlanks", "Skip blanks"), ("transpose", "Transpose (E)")] {
                 let mut b = d.values.get(key).and_then(Json::as_bool).unwrap_or(false);
-                if ui.checkbox(&mut b, lang.tr(label)).changed() {
+                if crate::rc_widgets::checkbox(ui, &mut b, lang.tr(label)).changed() {
                     d.values.insert(key.into(), json!(b));
                 }
             }

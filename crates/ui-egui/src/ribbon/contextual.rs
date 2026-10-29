@@ -48,7 +48,7 @@ pub(super) fn table_design(app: &mut SheetApp, ui: &mut Ui) {
             ("Banded Rows", "table.bandedRows", banded),
         ] {
             let mut on = v;
-            if ui.checkbox(&mut on, label).changed() {
+            if crate::rc_widgets::checkbox(ui, &mut on, label).changed() {
                 act(app, cmd, json!({"table": tname, "on": on}));
             }
         }
@@ -60,7 +60,7 @@ pub(super) fn table_design(app: &mut SheetApp, ui: &mut Ui) {
             ("Banded Columns", "table.bandedColumns", banded_c),
         ] {
             let mut on = v;
-            if ui.checkbox(&mut on, label).changed() {
+            if crate::rc_widgets::checkbox(ui, &mut on, label).changed() {
                 act(app, cmd, json!({"table": tname, "on": on}));
             }
         }

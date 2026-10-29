@@ -474,7 +474,7 @@ fn status_bar_menu(app: &mut SheetApp, ui: &mut Ui) {
         ("maximum", "Maximum", st.maximum),
         ("sum", "Sum", st.sum),
     ] {
-        if ui.checkbox(&mut on, app.ui.language.tr(label)).changed() {
+        if crate::rc_widgets::checkbox(ui, &mut on, app.ui.language.tr(label)).changed() {
             app.run_or_alert("view.statusBar", json!({ key: on }));
         }
     }

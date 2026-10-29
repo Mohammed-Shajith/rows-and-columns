@@ -515,7 +515,7 @@ pub(super) fn form_fields(ui: &mut egui::Ui, d: &mut Dialog) {
                         {
                             d.values.insert(key.into(), json!(s));
                         }
-                        ui.checkbox(&mut d.show_password, lang.tr("Show password"));
+                        crate::rc_widgets::checkbox(ui, &mut d.show_password, lang.tr("Show password"));
                     });
                 }
                 Field::Number { key, label } => {
@@ -560,7 +560,7 @@ pub(super) fn form_fields(ui: &mut egui::Ui, d: &mut Dialog) {
                 }
                 Field::Check { key, label } => {
                     let mut b = d.values.get(key).and_then(Json::as_bool).unwrap_or(false);
-                    if ui.checkbox(&mut b, lang.tr(label)).changed() {
+                    if crate::rc_widgets::checkbox(ui, &mut b, lang.tr(label)).changed() {
                         d.values.insert(key.into(), json!(b));
                     }
                 }

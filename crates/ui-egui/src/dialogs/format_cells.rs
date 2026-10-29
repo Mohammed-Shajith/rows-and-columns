@@ -103,8 +103,8 @@ pub(super) fn format_cells(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog
             let mut rot = if st.align.rotation == 255 { 0.0 } else { st.align.rotation as f32 };
             ui.add(egui::Slider::new(&mut rot, -90.0..=90.0).text(lang.tr("Orientation (degrees)")));
             st.align.rotation = rot as i16;
-            ui.checkbox(&mut st.align.wrap, lang.tr("Wrap text"));
-            ui.checkbox(&mut st.align.shrink, lang.tr("Shrink to fit"));
+            crate::rc_widgets::checkbox(ui, &mut st.align.wrap, lang.tr("Wrap text"));
+            crate::rc_widgets::checkbox(ui, &mut st.align.shrink, lang.tr("Shrink to fit"));
         }
         "Font" => {
             craft_ui::ComboBox::from_label(lang.tr("Font")).selected_text(st.font.name.clone()).show_ui(ui, |ui| {
@@ -114,9 +114,9 @@ pub(super) fn format_cells(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog
             });
             ui.add(egui::Slider::new(&mut st.font.size, 6.0..=72.0).text(lang.tr("Size")));
             ui.horizontal(|ui| {
-                ui.checkbox(&mut st.font.bold, lang.tr("Bold"));
-                ui.checkbox(&mut st.font.italic, lang.tr("Italic"));
-                ui.checkbox(&mut st.font.strike, lang.tr("Strikethrough"));
+                crate::rc_widgets::checkbox(ui, &mut st.font.bold, lang.tr("Bold"));
+                crate::rc_widgets::checkbox(ui, &mut st.font.italic, lang.tr("Italic"));
+                crate::rc_widgets::checkbox(ui, &mut st.font.strike, lang.tr("Strikethrough"));
             });
             use gridcraft_engine::model::{Underline, VertAlign};
             ui.horizontal(|ui| {
@@ -201,8 +201,8 @@ pub(super) fn format_cells(app: &mut SheetApp, ui: &mut egui::Ui, d: &mut Dialog
             }
         }
         "Protection" => {
-            ui.checkbox(&mut st.protection.locked, lang.tr("Locked"));
-            ui.checkbox(&mut st.protection.hidden, lang.tr("Hidden"));
+            crate::rc_widgets::checkbox(ui, &mut st.protection.locked, lang.tr("Locked"));
+            crate::rc_widgets::checkbox(ui, &mut st.protection.hidden, lang.tr("Hidden"));
             ui.label(
                 egui::RichText::new(
                     lang.tr("Locking cells or hiding formulas has no effect until you protect the worksheet (Review › Protect Sheet)."),

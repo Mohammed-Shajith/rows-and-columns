@@ -11,19 +11,19 @@ pub(super) fn options(app: &mut SheetApp, ui: &mut Ui) {
     general_options(app, ui, lang);
     ui.add_space(6.0);
     let mut formula_bar = app.session.prefs.formula_bar;
-    if ui.checkbox(&mut formula_bar, lang.tr("Show formula bar")).changed() {
+    if crate::rc_widgets::checkbox(ui, &mut formula_bar, lang.tr("Show formula bar")).changed() {
         app.run_or_alert("view.formulaBar", json!({"on": formula_bar}));
     }
     ui.add_space(18.0);
     section(ui, lang, "Options|Editing");
     let mut autocomplete = app.ui.autocomplete;
-    if ui.checkbox(&mut autocomplete, lang.tr("Enable AutoComplete for cell values")).changed() {
+    if crate::rc_widgets::checkbox(ui, &mut autocomplete, lang.tr("Enable AutoComplete for cell values")).changed() {
         app.run_or_alert("options.autoComplete", json!({"on": autocomplete}));
     }
     ui.add_space(18.0);
     section(ui, lang, "Options|Save");
     let mut autosave = app.ui.autosave;
-    if ui.checkbox(&mut autosave, lang.tr("Save .xlsx workbooks automatically after every change")).changed() {
+    if crate::rc_widgets::checkbox(ui, &mut autosave, lang.tr("Save .xlsx workbooks automatically after every change")).changed() {
         app.toggle_autosave();
     }
     let Some(calc) = app.session.active().map(|d| d.wb.calc.clone()) else { return };
@@ -89,7 +89,7 @@ fn calc_options(app: &mut SheetApp, ui: &mut Ui, lang: Language, calc: &gridcraf
     }
     ui.add_space(4.0);
     let mut iterative = calc.iterative;
-    if ui.checkbox(&mut iterative, lang.tr("Enable iterative calculation")).changed() {
+    if crate::rc_widgets::checkbox(ui, &mut iterative, lang.tr("Enable iterative calculation")).changed() {
         app.run_or_alert("formulas.calculationOptions", json!({"iterative": iterative}));
     }
     // Maximum Iterations and Maximum Change apply only while iteration is on, as in Excel.

@@ -49,7 +49,7 @@ pub(super) fn print(app: &mut SheetApp, ui: &mut Ui, bs: &mut Backstage, out: &m
                 .response
                 .accessible_name(lang.tr("Print What"));
             ui.add_space(8.0);
-            if ui.checkbox(&mut bs.fit_to_page, lang.tr("Fit Sheet on One Page")).changed() {
+            if crate::rc_widgets::checkbox(ui, &mut bs.fit_to_page, lang.tr("Fit Sheet on One Page")).changed() {
                 bs.preview_page = 0;
             }
             ui.add_space(8.0);
