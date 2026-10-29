@@ -35,6 +35,7 @@ mod fill_options_button;
 mod filter_cursor;
 mod filter_list_scroll;
 mod filter_menu_enter;
+mod filter_popup_excel;
 mod find_dialog_focus;
 mod floating_pictures;
 mod font_size_box;

@@ -18,6 +18,7 @@ use crate::theme::{self, Tokens};
 mod cell_paint;
 mod cursor;
 mod editor;
+mod filter_popup;
 mod geo;
 mod interact;
 mod keyboard;

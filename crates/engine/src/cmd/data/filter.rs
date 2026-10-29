@@ -117,6 +117,65 @@ pub(super) fn filter_by(s: &mut Session, p: &Json) -> Result<Json> {
     Ok(json!({"hiddenRows": hidden}))
 }
 
+/// One distinct value of a filter column, as the dropdown lists it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FilterItem {
+    /// Display text ("(Blanks)" for empty cells): what `data.filterBy` `values` matches.
+    pub text: String,
+    /// Whether the column's current filter shows it.
+    pub on: bool,
+    /// Year, month and day when the value is a date (a number shown in a date format).
+    pub date: Option<(i32, u32, u32)>,
+    /// The value is a number (dates included).
+    pub number: bool,
+}
+
+/// The dropdown's distinct values in sort order, with their dates, and whether the column is a
+/// date column (at least one value, and every non-blank value a date). The dropdown groups a
+/// date column into years › months › days, as Excel does.
+pub fn filter_items(wb: &Workbook, sheet: usize, col: u32) -> (Vec<FilterItem>, bool) {
+    let Some(sh) = wb.sheet(sheet) else { return (vec![], false) };
+    let Some(af) = &sh.autofilter else { return (vec![], false) };
+    let off = col.saturating_sub(af.range.start.col);
+    let selected: Option<&FilterCriterion> = af.criteria.iter().find(|(o, _)| *o == off).map(|(_, c)| c);
+    let mut date_style: std::collections::HashMap<StyleId, bool> = std::collections::HashMap::new();
+    let mut seen = std::collections::BTreeMap::new();
+    let mut all_dates = true;
+    let mut any = false;
+    for row in af.range.start.row + 1..=af.range.end.row.min(af.range.start.row + 1_000_000) {
+        let c = CellRef::new(row, col);
+        let v = sh.value(c);
+        let blank = filter_blank(&v);
+        let t = if blank { "(Blanks)".to_string() } else { crate::display::cell_text(wb, sh, c) };
+        let date = match &v {
+            Value::Number(n) if !blank => {
+                let id = sh.style_id(c);
+                let is_date = *date_style.entry(id).or_insert_with(|| crate::display::number_format(wb.styles.get(id).num_fmt.as_str()).is_date());
+                if is_date { gridcraft_core::date::datetime_from_serial(wb.date_system, *n).map(|d| (d.year, d.month, d.day)) } else { None }
+            }
+            _ => None,
+        };
+        if !blank {
+            any = true;
+            all_dates &= date.is_some();
+        }
+        let on = match selected {
+            Some(FilterCriterion::Values { values, blanks }) => {
+                if blank {
+                    *blanks
+                } else {
+                    values.iter().any(|x| x.eq_ignore_ascii_case(&t))
+                }
+            }
+            _ => true,
+        };
+        let key = if blank { sort_key(&Value::Empty) } else { sort_key(&v) };
+        seen.entry((key, t)).or_insert((on, date, matches!(v, Value::Number(_))));
+    }
+    let items = seen.into_iter().map(|((_, text), (on, date, number))| FilterItem { text, on, date, number }).collect();
+    (items, any && all_dates)
+}
+
 /// Does a value pass a custom comparison (`>`, `=*abc*`, `<>x`…)?
 fn custom_ok(v: &Value, text: &str, op: &str, crit: &str) -> bool {
     let num = gridcraft_core::parse::parse_number_text(crit);
