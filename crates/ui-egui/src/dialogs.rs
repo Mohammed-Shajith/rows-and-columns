@@ -562,9 +562,26 @@ impl Dialog {
                     Check { key: "space", label: "Space" },
                     Text { key: "other", label: "Other:" },
                     Check { key: "treatConsecutive", label: "Treat consecutive delimiters as one" },
+                    // Rows&Columns (G02): Excel's step 3. A date order re-reads dates as written,
+                    // which fixes a column of day-month-year dates opened as month-day-year.
+                    Choice {
+                        key: "format",
+                        label: "Column data format:",
+                        options: vec![
+                            ("general", "General"),
+                            ("text", "Text"),
+                            ("DMY", "Date: DMY (day-month-year)"),
+                            ("MDY", "Date: MDY (month-day-year)"),
+                            ("YMD", "Date: YMD (year-month-day)"),
+                            ("MYD", "Date: MYD"),
+                            ("DYM", "Date: DYM"),
+                            ("YDM", "Date: YDM"),
+                            ("skip", "Do not import column (skip)"),
+                        ],
+                    },
                     Text { key: "destination", label: "Destination:" },
                 ],
-                json!({"tab": true, "comma": true, "destination": active}),
+                json!({"tab": true, "comma": true, "format": "general", "destination": active}),
             ),
             "removeDuplicates" => Dialog::form(
                 "removeDuplicates",

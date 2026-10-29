@@ -30,4 +30,5 @@ mod sparse_clear_invalidation;
 mod stored_list_shape;
 mod table_resize_overlap;
 mod table_total_row_last_row;
+mod text_to_columns_dates;
 mod wrap_row_height;

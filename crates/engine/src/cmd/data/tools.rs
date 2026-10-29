@@ -121,11 +121,30 @@ pub(super) fn text_to_columns(s: &mut Session, p: &Json) -> Result<Json> {
     let consecutive = bool_param(p, "treatConsecutive").unwrap_or(false);
     let quote = str_param(p, "textQualifier").and_then(|q| q.chars().next()).unwrap_or('"');
     let dest = cell_param_on(s, p, "destination", sheet)?.unwrap_or(r.start);
+    // Excel's "Column data format": one for every column (`format`), or per column (`columnFormats`).
+    let all = match str_param(p, "format") {
+        Some(f) => ColFmt::parse(f).ok_or_else(|| bad("data.textToColumns", format!("unknown format `{f}`")))?,
+        None => ColFmt::General,
+    };
+    let per_column: Vec<ColFmt> = match p.get("columnFormats").and_then(Json::as_array) {
+        Some(a) => a
+            .iter()
+            .map(|f| f.as_str().and_then(ColFmt::parse).ok_or_else(|| bad("data.textToColumns", format!("unknown column format {f}"))))
+            .collect::<Result<_>>()?,
+        None => vec![],
+    };
+    let date_system = s.doc()?.wb.date_system;
     edit(s, |cx| {
         let Some(sh) = cx.wb.sheet(sheet) else { return Ok(()) };
-        let mut out: Vec<(CellRef, String)> = Vec::new();
+        let mut out: Vec<(CellRef, String, ColFmt)> = Vec::new();
         for (i, row) in (r.start.row..=r.end.row).enumerate() {
-            let text = sh.value(CellRef::new(row, r.start.col)).display();
+            let src = CellRef::new(row, r.start.col);
+            let v = sh.value(src);
+            // A date is split and re-read as it is shown ("7/8/2024"), as Excel does: that is how a
+            // column of dates read in the wrong order gets fixed.
+            let shown_date = matches!(v, gridcraft_core::Value::Number(_))
+                && crate::display::number_format(cx.wb.styles.get(sh.style_id(src)).num_fmt.as_str()).is_date();
+            let text = if shown_date { crate::display::cell_text(&cx.wb, sh, src) } else { v.display() };
             let parts: Vec<String> = match &fixed {
                 Some(w) => {
                     let chars: Vec<char> = text.chars().collect();
@@ -141,12 +160,29 @@ pub(super) fn text_to_columns(s: &mut Session, p: &Json) -> Result<Json> {
                 }
                 None => split_delimited(&text, &delims, consecutive, quote),
             };
+            let mut j_out = 0u32;
             for (j, part) in parts.into_iter().enumerate() {
-                out.push((CellRef::new(dest.row + i as u32, dest.col + j as u32), part));
+                let fmt = per_column.get(j).copied().unwrap_or(all);
+                if fmt == ColFmt::Skip {
+                    continue;
+                }
+                out.push((CellRef::new(dest.row + i as u32, dest.col.saturating_add(j_out)), part, fmt));
+                j_out = j_out.saturating_add(1);
             }
         }
-        for (c, t) in out {
-            let cell = crate::cmd::edit::input_to_cell(&t, sheet, c, &mut cx.wb).unwrap_or(None);
+        for (c, t, fmt) in out {
+            let cell = match fmt {
+                ColFmt::Text if !t.is_empty() => crate::cmd::edit::input_to_cell(&format!("'{t}"), sheet, c, &mut cx.wb).unwrap_or(None),
+                ColFmt::Date(order) => match date_in_order(&t, order, date_system) {
+                    Some(serial) => crate::cmd::edit::input_to_cell(&serial.to_string(), sheet, c, &mut cx.wb).unwrap_or(None).map(|mut x| {
+                        x.style = cx.wb.styles.derive(x.style, |st| st.num_fmt = gridcraft_model::NumFmt::new(date_code(order)));
+                        x
+                    }),
+                    // Not a date in that order: kept as it reads, as Excel leaves it.
+                    None => crate::cmd::edit::input_to_cell(&t, sheet, c, &mut cx.wb).unwrap_or(None),
+                },
+                _ => crate::cmd::edit::input_to_cell(&t, sheet, c, &mut cx.wb).unwrap_or(None),
+            };
             let shm = cx.sheet_mut(sheet)?;
             match cell {
                 Some(x) => shm.set_cell(c, x),
@@ -159,6 +195,65 @@ pub(super) fn text_to_columns(s: &mut Session, p: &Json) -> Result<Json> {
         Ok(())
     })?;
     ok()
+}
+
+/// A Text to Columns "Column data format".
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ColFmt {
+    General,
+    Text,
+    Skip,
+    /// A date written in this order of day, month and year (`b"DMY"`).
+    Date([u8; 3]),
+}
+
+impl ColFmt {
+    fn parse(s: &str) -> Option<ColFmt> {
+        let u = s.trim().to_ascii_uppercase();
+        match u.as_str() {
+            "GENERAL" => Some(ColFmt::General),
+            "TEXT" => Some(ColFmt::Text),
+            "SKIP" => Some(ColFmt::Skip),
+            "MDY" | "DMY" | "YMD" | "MYD" | "DYM" | "YDM" => {
+                let b = u.as_bytes();
+                Some(ColFmt::Date([*b.first()?, *b.get(1)?, *b.get(2)?]))
+            }
+            _ => None,
+        }
+    }
+}
+
+/// The number format a converted date is shown in: day first stays day first.
+fn date_code(order: [u8; 3]) -> &'static str {
+    match order.first() {
+        Some(b'D') => "dd/mm/yyyy",
+        Some(b'Y') => "yyyy-mm-dd",
+        _ => "m/d/yyyy",
+    }
+}
+
+/// `text` read as a date with its day, month and year in `order` ("16-08-2023" in DMY), as a serial.
+/// The first three runs of digits are used (a time after them is ignored); a two-digit year is
+/// 2000-2029 below 30 and 19xx otherwise, as Excel reads it. `None` when it isn't a real date.
+fn date_in_order(text: &str, order: [u8; 3], sys: gridcraft_core::date::DateSystem) -> Option<f64> {
+    let nums: Vec<&str> = text.split(|ch: char| !ch.is_ascii_digit()).filter(|t| !t.is_empty()).take(3).collect();
+    if nums.len() < 3 {
+        return None;
+    }
+    let (mut y, mut m, mut d) = (None, None, None);
+    for (tok, which) in nums.iter().zip(order) {
+        let n: i64 = tok.parse().ok()?;
+        match which {
+            b'Y' => y = Some(if tok.len() <= 2 { if n < 30 { 2000 + n } else { 1900 + n } } else { n }),
+            b'M' => m = Some(n),
+            _ => d = Some(n),
+        }
+    }
+    let (y, m, d) = (y?, m?, d?);
+    // serial_from_ymd rolls over like DATE() (month 16 → next April); a real date must read back as written.
+    let serial = gridcraft_core::date::serial_from_ymd(sys, y, m, d)?;
+    let back = gridcraft_core::date::datetime_from_serial(sys, serial)?;
+    (i64::from(back.year) == y && i64::from(back.month) == m && i64::from(back.day) == d).then_some(serial)
 }
 
 pub(super) fn split_delimited(text: &str, delims: &[char], consecutive: bool, quote: char) -> Vec<String> {

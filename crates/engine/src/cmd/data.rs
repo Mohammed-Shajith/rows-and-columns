@@ -84,7 +84,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Text to Columns",
             ["Data", "Data Tools"],
             None,
-            "{range?, delimiters?: [\",\", \"\\t\", \" \", \";\"], other?: \"|\", fixedWidths?: [5, 10], treatConsecutive?: bool, textQualifier?: \"\\\"\", destination?: \"B1\"}",
+            "{range?, delimiters?: [\",\", \"\\t\", \" \", \";\"], other?: \"|\", fixedWidths?: [5, 10], treatConsecutive?: bool, textQualifier?: \"\\\"\", destination?: \"B1\", format?: \"general\"|\"text\"|\"skip\"|\"DMY\"|\"MDY\"|\"YMD\"|\"MYD\"|\"DYM\"|\"YDM\" (every column), columnFormats?: [one per column, same values]}",
             has_doc,
             text_to_columns
         ),

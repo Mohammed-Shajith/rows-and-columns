@@ -46,3 +46,24 @@ fn confirming_text_to_columns_splits_on_the_ticked_delimiter() {
     let read = h.state_mut().run("sheet.read", json!({"range": "A1:B2"})).unwrap();
     assert_eq!(read["values"], json!([["a", "b"], ["c", "d"]]), "{read}");
 }
+
+/// Rows&Columns G02: the dialog's "Column data format" re-reads a column of day-month-year dates.
+#[test]
+fn text_to_columns_date_format_fixes_day_first_dates() {
+    let mut h = harness();
+    h.state_mut().run("range.setValues", json!({"range": "A1", "values": [["7/8/2024"], ["16-08-2023"]]})).unwrap();
+    h.state_mut().run("selection.set", json!({"range": "A1:A2"})).unwrap();
+    control(&mut h, "ui.dialog", json!({"name": "textToColumns"}));
+    control(&mut h, "ui.dialog.set", json!({"field": "format", "value": "DMY"}));
+    let r = control(&mut h, "ui.dialog.confirm", json!({}));
+    assert_eq!(r["ok"], json!(true), "{r}");
+    let d = h.state().session.active().unwrap();
+    let sh = d.wb.active().unwrap();
+    let ymd = |a1: &str| {
+        let n = sh.value(gridcraft_engine::core::CellRef::parse(a1).unwrap()).as_f64().unwrap();
+        let t = gridcraft_engine::core::date::datetime_from_serial(d.wb.date_system, n).unwrap();
+        (t.year, t.month, t.day)
+    };
+    assert_eq!(ymd("A1"), (2024, 8, 7), "7 August, not 8 July");
+    assert_eq!(ymd("A2"), (2023, 8, 16), "text became 16 August");
+}
