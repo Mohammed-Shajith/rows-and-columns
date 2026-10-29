@@ -152,15 +152,24 @@ impl G<'_> {
         self.p.add(PathShape::line(v, PathStroke::new(w * self.s.clamp(1.0, 2.0), c)));
     }
     fn stroke(&self, pts: &[(f32, f32)], c: Color32) {
-        self.line(pts, c, 1.15);
+        // Rows&Columns G05: a touch bolder than GridCraft's 1.15, closer to Excel's line weight.
+        self.line(pts, c, 1.35);
     }
     fn rect(&self, x: f32, y: f32, w: f32, h: f32, fill: Option<Color32>, stroke: Option<Color32>) {
         let r = Rect::from_min_size(self.pt(x, y), vec2(w * self.s, h * self.s));
+        let radius = (1.2 * self.s).min(r.width().min(r.height()) / 3.0);
         if let Some(f) = fill {
-            self.p.rect_filled(r, 1.0, f);
+            self.p.rect_filled(r, radius, f);
+            // Rows&Columns G05: a coloured shape gets depth (a darker lower part and a darker
+            // edge of its own colour), so icons look solid rather than flat.
+            if stroke.is_none() && colourful(f) && r.height() >= 3.0 {
+                let low = Rect::from_min_max(pos2(r.left(), r.center().y), r.max);
+                self.p.rect_filled(low, radius, shade(f, 0.88));
+                self.p.rect_stroke(r, radius, Stroke::new(0.8 * self.s.clamp(1.0, 2.0), shade(f, 0.7)), egui::StrokeKind::Inside);
+            }
         }
         if let Some(c) = stroke {
-            self.p.rect_stroke(r, 1.0, Stroke::new(1.0, c), egui::StrokeKind::Inside);
+            self.p.rect_stroke(r, radius, Stroke::new(self.s.clamp(1.0, 1.6), c), egui::StrokeKind::Inside);
         }
     }
     fn poly(&self, pts: &[(f32, f32)], fill: Color32) {
@@ -170,6 +179,9 @@ impl G<'_> {
     fn circle(&self, x: f32, y: f32, r: f32, fill: Option<Color32>, stroke: Option<Color32>) {
         if let Some(f) = fill {
             self.p.circle_filled(self.pt(x, y), r * self.s, f);
+            if stroke.is_none() && colourful(f) && r >= 1.5 {
+                self.p.circle_stroke(self.pt(x, y), r * self.s, Stroke::new(0.8 * self.s.clamp(1.0, 2.0), shade(f, 0.7)));
+            }
         }
         if let Some(c) = stroke {
             self.p.circle_stroke(self.pt(x, y), r * self.s, Stroke::new(1.0, c));
@@ -186,6 +198,19 @@ impl G<'_> {
         let font = egui::FontId::new(size * self.s, egui::FontFamily::Name(fam.into()));
         self.p.text(self.pt(x, y), egui::Align2::CENTER_CENTER, t, font, c);
     }
+}
+
+/// A saturated colour (category colours), as opposed to paper, greys and the text colour.
+fn colourful(c: Color32) -> bool {
+    let [r, g, b, a] = c.to_srgba_unmultiplied();
+    a > 160 && r.max(g).max(b).saturating_sub(r.min(g).min(b)) > 48
+}
+
+/// `c` darkened to `f` of its brightness.
+fn shade(c: Color32, f: f32) -> Color32 {
+    let [r, g, b, a] = c.to_srgba_unmultiplied();
+    let m = |v: u8| (f32::from(v) * f).round().clamp(0.0, 255.0) as u8;
+    Color32::from_rgba_unmultiplied(m(r), m(g), m(b), a)
 }
 
 /// The colours an icon draws with besides its main colour: the paper inside documents and cells,
