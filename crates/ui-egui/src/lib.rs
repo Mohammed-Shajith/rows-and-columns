@@ -295,6 +295,10 @@ pub struct SheetApp {
     /// The update check, the startup prompt and a running self-update (desktop only).
     #[cfg(not(target_arch = "wasm32"))]
     updates_rt: updates_ui::Runtime,
+    /// A big file being read on a worker thread (Rows&Columns G07).
+    background_open: Option<app::background_open::BackgroundOpen>,
+    /// egui's clock at the start of this frame.
+    ctx_time: f64,
 }
 
 /// Strips the engine's error prefixes for message boxes.

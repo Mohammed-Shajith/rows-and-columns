@@ -9,6 +9,7 @@ pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(noundo "file.new", "New Workbook", ["File"], Some("Cmd+N"), "{sample?: \"budget\"|\"sales\"|\"grades\"}", always, new_workbook),
         cmd!(noundo "file.open", "Open…", ["File"], Some("Cmd+O"), "{path} | {name, base64}, plus {password} for a password-protected workbook and {csvAsText?: bool} to keep every csv/tsv/txt field as text, with no number or date conversion (xlsx, xlsm, xls import, xlsb and ods data import, csv, tsv, txt, json)", always, open),
+        cmd!(noundo "file.openPrepared", "Open (prepared)", [], None, "{id}: adopts a workbook read in the background by `prepare_open` and handed over with `Session::hand_over_open` (Rows&Columns)", always, open_prepared),
         cmd!(noundo "file.save", "Save", ["File"], Some("Cmd+S"), "{path?} (xlsx by default; .csv/.tsv/.json/.html/.pdf by extension)", has_doc, save),
         cmd!(noundo "file.saveAs", "Save As…", ["File"], Some("Cmd+Shift+S"), "{path} (.xlsx, .csv, .tsv, .json, .html, or .pdf: a PDF of the active sheet)", has_doc, save_as),
         cmd!(query "file.saveBytes", "Encode Workbook", [], None, "{format?: xlsx|csv|tsv|json|html} → {base64}", has_doc, save_bytes),
@@ -57,19 +58,43 @@ fn open(s: &mut Session, p: &Json) -> Result<Json> {
         s.ui_requests.push(crate::UiRequest::Dialog("open".into(), json!({})));
         return ok();
     };
-    let encrypted = gridcraft_xlsx::sniff(&bytes) == gridcraft_xlsx::Format::Encrypted;
-    let (mut wb, warnings) = crate::io::open_bytes_with(&name, &bytes, str_param(p, "password"), bool_param(p, "csvAsText").unwrap_or(false))?;
-    wb.source_dir = str_param(p, "path").and_then(crate::io::source_dir);
+    let prepared = prepare_bytes(name, &bytes, str_param(p, "path"), str_param(p, "password"), bool_param(p, "csvAsText").unwrap_or(false))?;
+    finish_open(s, prepared)
+}
+
+/// A file read and parsed, ready to become an open document: the slow half of `file.open`, which
+/// needs no session, so a front end can run it on a worker thread and keep its window responsive
+/// (Rows&Columns G07). `finish_open` (or `file.openPrepared`) does the rest.
+pub struct PreparedOpen {
+    pub name: String,
+    pub wb: gridcraft_model::Workbook,
+    pub warnings: Vec<String>,
+    title: String,
+    /// Save target: none for an import or a decrypted copy.
+    path: Option<String>,
+    xlsx_content: bool,
+}
+
+/// Reads and parses the file at `path` (no session needed; may run on any thread).
+pub fn prepare_open(path: &str, password: Option<&str>, csv_as_text: bool) -> Result<PreparedOpen> {
+    let bytes = crate::io::read_file(path)?;
+    prepare_bytes(path.to_string(), &bytes, Some(path), password, csv_as_text)
+}
+
+fn prepare_bytes(name: String, bytes: &[u8], path: Option<&str>, password: Option<&str>, csv_as_text: bool) -> Result<PreparedOpen> {
+    let encrypted = gridcraft_xlsx::sniff(bytes) == gridcraft_xlsx::Format::Encrypted;
+    let (mut wb, warnings) = crate::io::open_bytes_with(&name, bytes, password, csv_as_text)?;
+    wb.source_dir = path.and_then(crate::io::source_dir);
     // What `CELL("filename")` reports (#1489). A workbook opened from bytes knows its name but
     // never a folder, so it reports `[name]Sheet` with none; an import reports the file it came
     // from, as Excel does, even though Save must still ask where to put the .xlsx.
-    wb.source_path = match str_param(p, "path") {
+    wb.source_path = match path {
         Some(path) => crate::io::source_path(path),
         None => Some(std::path::PathBuf::from(&name)),
     };
     let imported =
         matches!(crate::io::FileKind::from_path(&name), Some(crate::io::FileKind::Ods | crate::io::FileKind::Xlsb | crate::io::FileKind::Xls))
-            || matches!(gridcraft_xlsx::sniff(&bytes), gridcraft_xlsx::Format::Ods | gridcraft_xlsx::Format::Xlsb | gridcraft_xlsx::Format::Xls);
+            || matches!(gridcraft_xlsx::sniff(bytes), gridcraft_xlsx::Format::Ods | gridcraft_xlsx::Format::Xlsb | gridcraft_xlsx::Format::Xls);
     let title = if imported {
         format!("{} (imported).xlsx", std::path::Path::new(&name).file_stem().and_then(std::ffi::OsStr::to_str).unwrap_or("Book"))
     } else {
@@ -78,7 +103,14 @@ fn open(s: &mut Session, p: &Json) -> Result<Json> {
     // An import has no save target: ordinary Save must ask for a new destination. Neither does a
     // workbook decrypted with its password, so Save never replaces the encrypted original with
     // an unprotected copy.
-    let path = str_param(p, "path").filter(|_| !imported && !encrypted).map(str::to_string);
+    let path = path.filter(|_| !imported && !encrypted).map(str::to_string);
+    let xlsx_content = crate::io::FileKind::from_path(&name).is_none() && gridcraft_xlsx::sniff(bytes) == gridcraft_xlsx::Format::Xlsx;
+    Ok(PreparedOpen { name, wb, warnings, title, path, xlsx_content })
+}
+
+/// Makes a prepared file the active document: the quick half of `file.open`.
+pub fn finish_open(s: &mut Session, prepared: PreparedOpen) -> Result<Json> {
+    let PreparedOpen { wb, warnings, title, path, xlsx_content, .. } = prepared;
     // Replace an untouched blank Book1 like Excel does.
     if s.documents().len() == 1
         && s.active().is_some_and(|d| d.path.is_none() && !d.is_dirty() && d.undo.is_empty() && d.wb.sheets.iter().all(|sh| sh.cells.is_empty()))
@@ -87,7 +119,7 @@ fn open(s: &mut Session, p: &Json) -> Result<Json> {
     }
     // Someone else may have made the file: its active content asks before it runs.
     let mut doc = DocState::new(wb, path, title, crate::Trust::FromFile);
-    if crate::io::FileKind::from_path(&name).is_none() && gridcraft_xlsx::sniff(&bytes) == gridcraft_xlsx::Format::Xlsx {
+    if xlsx_content {
         doc.content_kind = Some(crate::io::FileKind::Xlsx);
     }
     let i = s.add_document(doc);
@@ -104,6 +136,13 @@ fn open(s: &mut Session, p: &Json) -> Result<Json> {
     Ok(
         json!({"index": i, "title": d.display_title(), "sheets": d.wb.sheets.iter().map(|s| s.name.clone()).collect::<Vec<_>>(), "warnings": warnings}),
     )
+}
+
+/// `file.openPrepared {id}`: adopts the workbook handed over under `id`.
+fn open_prepared(s: &mut Session, p: &Json) -> Result<Json> {
+    let id = p.get("id").and_then(Json::as_u64).ok_or_else(|| bad("file.openPrepared", "missing `id`"))?;
+    let prepared = s.take_prepared_open(id).ok_or_else(|| bad("file.openPrepared", "nothing was handed over under that id"))?;
+    finish_open(s, prepared)
 }
 
 fn save(s: &mut Session, p: &Json) -> Result<Json> {

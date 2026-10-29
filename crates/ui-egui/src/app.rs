@@ -11,6 +11,7 @@ use super::{
     keytips, panes, pivot_pane, printing, ribbon, tabs, text_box, theme, widgets,
 };
 
+pub(crate) mod background_open;
 mod clipboard;
 mod commands;
 mod editing;
@@ -81,6 +82,8 @@ impl SheetApp {
             arrange_windows: None,
             #[cfg(not(target_arch = "wasm32"))]
             updates_rt: Default::default(),
+            background_open: None,
+            ctx_time: 0.0,
         }
     }
 
@@ -129,6 +132,7 @@ impl SheetApp {
         // Printing feedback is polled once per frame, here, so hidden windows and logic-only
         // frames still see worker completion. `ui` and the desktop app no longer poll it.
         self.poll_printing(ctx);
+        self.poll_background_open(ctx);
         self.guard_window_close(ctx);
         #[cfg(not(target_arch = "wasm32"))]
         updates_ui::tick(self, ctx);
@@ -188,6 +192,8 @@ impl SheetApp {
             return;
         }
         let t0 = now_ms();
+        // Rows&Columns G07: "Opening … — Esc to cancel" while a big file loads in the background.
+        self.background_open_overlay(&ctx);
         // A script may have switched windows since the last frame.
         self.follow_active_window();
         text_box::before_ui(self, &ctx);

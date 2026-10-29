@@ -447,6 +447,9 @@ pub struct Session {
     journal_sizes: Vec<usize>,
     journal_bytes: usize,
     pub ui_requests: Vec<UiRequest>,
+    /// Files read in the background, waiting for `file.openPrepared` (Rows&Columns G07).
+    prepared_opens: Vec<(u64, cmd::file::PreparedOpen)>,
+    next_prepared: u64,
     /// Format painter source style (sticky when double-clicked).
     pub format_painter: Option<(Arc<Workbook>, usize, RangeRef, bool)>,
     /// Find state (last search).
@@ -523,6 +526,20 @@ impl Session {
         self.active_mut().ok_or(EngineError::NoDocument)
     }
     /// Opens a workbook in a new window, which becomes the active one.
+    /// Hands over a file read in the background (`cmd::file::prepare_open`); open it with
+    /// `file.openPrepared {id}`, which runs it like any command (crash guard, journal).
+    pub fn hand_over_open(&mut self, prepared: cmd::file::PreparedOpen) -> u64 {
+        self.next_prepared = self.next_prepared.wrapping_add(1);
+        let id = self.next_prepared;
+        self.prepared_opens.push((id, prepared));
+        id
+    }
+
+    pub(crate) fn take_prepared_open(&mut self, id: u64) -> Option<cmd::file::PreparedOpen> {
+        let i = self.prepared_opens.iter().position(|(k, _)| *k == id)?;
+        Some(self.prepared_opens.swap_remove(i).1)
+    }
+
     pub fn add_document(&mut self, d: DocState) -> usize {
         let uid = d.uid;
         self.docs.push(d);
