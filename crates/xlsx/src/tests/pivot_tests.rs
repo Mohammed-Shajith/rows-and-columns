@@ -760,3 +760,18 @@ fn two_value_fields_without_columns_hide_the_values_row() {
     assert!(t.contains("firstHeaderRow=\"1\""), "{t}");
     assert!(!t.contains("hideValuesRow"), "{t}");
 }
+
+/// Rows&Columns G10: Excel's automatic date grouping (Years › Quarters › Months › dates). The
+/// date field carries only `<fieldGroup par="…"/>`; each level reads without a grouping warning
+/// and the collapsed items keep the pivot showing years only, as in Excel.
+#[test]
+fn excel_automatic_date_grouping_reads_without_warnings() {
+    let cache = r#"<pivotCacheDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cacheSource type="worksheet"><worksheetSource ref="A1:B5"/></cacheSource><cacheFields count="4"><cacheField name="D" numFmtId="14"><sharedItems containsSemiMixedTypes="0" containsNonDate="0" containsDate="1" containsString="0" minDate="2024-01-05T00:00:00" maxDate="2025-03-02T00:00:00" count="2"><d v="2024-01-05T00:00:00"/><d v="2025-03-02T00:00:00"/></sharedItems><fieldGroup par="3"/></cacheField><cacheField name="V" numFmtId="0"><sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1" containsInteger="1" minValue="1" maxValue="9"/></cacheField><cacheField name="Months (D)" numFmtId="0" databaseField="0"><fieldGroup base="0"><rangePr groupBy="months" startDate="2024-01-05T00:00:00" endDate="2025-03-02T00:00:00"/><groupItems count="14"><s v="&lt;1/5/2024"/><s v="Jan"/><s v="Feb"/><s v="Mar"/><s v="Apr"/><s v="May"/><s v="Jun"/><s v="Jul"/><s v="Aug"/><s v="Sep"/><s v="Oct"/><s v="Nov"/><s v="Dec"/><s v="&gt;3/2/2025"/></groupItems></fieldGroup></cacheField><cacheField name="Years (D)" numFmtId="0" databaseField="0"><fieldGroup base="0"><rangePr groupBy="years" startDate="2024-01-05T00:00:00" endDate="2025-03-02T00:00:00"/><groupItems count="4"><s v="&lt;1/5/2024"/><s v="2024"/><s v="2025"/><s v="&gt;3/2/2025"/></groupItems></fieldGroup></cacheField></cacheFields></pivotCacheDefinition>"#;
+    let table = r#"<pivotTableDefinition name="ByYear" cacheId="1"><location ref="$D$3:$E$6" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/><pivotFields count="4"><pivotField axis="axisRow" numFmtId="14" showAll="0"><items count="3"><item x="0"/><item x="1"/><item t="default"/></items></pivotField><pivotField dataField="1" showAll="0"/><pivotField axis="axisRow" showAll="0"><items count="15"><item sd="0" x="0"/><item sd="0" x="1"/><item sd="0" x="3"/><item t="default"/></items></pivotField><pivotField axis="axisRow" showAll="0"><items count="5"><item sd="0" x="0"/><item sd="0" x="1"/><item sd="0" x="2"/><item t="default"/></items></pivotField></pivotFields><rowFields count="3"><field x="3"/><field x="2"/><field x="0"/></rowFields><dataFields count="1"><dataField name="Sum of V" fld="1" baseField="0" baseItem="0"/></dataFields></pivotTableDefinition>"#;
+    let (wb, report) = read_xlsx(&with_pivot(table, Some(cache))).unwrap();
+    assert!(report.warnings.iter().all(|w| !w.contains("grouping")), "{:?}", report.warnings);
+    let pt = &wb.sheet(0).unwrap().pivots[0];
+    let levels: Vec<(&str, PivotDateGroup)> = pt.rows.iter().map(|f| (f.source_col.as_str(), f.date_group)).collect();
+    assert_eq!(levels, [("D", PivotDateGroup::Years), ("D", PivotDateGroup::Months), ("D", PivotDateGroup::None)]);
+    assert!(pt.rows[0].collapsed_items.iter().any(|c| c == "2024"), "years stay collapsed: {:?}", pt.rows[0].collapsed_items);
+}

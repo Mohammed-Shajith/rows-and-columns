@@ -184,9 +184,13 @@ fn field_ref(cx: &mut Ctx<'_>, cache: &CacheIn, i: usize) -> Option<(String, Piv
         return None;
     }
     match &f.group {
-        Some((base, by, _)) => {
+        Some((base, by, group_items)) => {
             let by = match by {
                 Some(b) => *b,
+                // Rows&Columns G10: Excel's automatic date grouping leaves the date field itself
+                // with `<fieldGroup par="…"/>` only (its Years / Quarters / Months live in extra
+                // fields that point back to it). That field is the plain dates level.
+                None if f.database && base.is_none() && group_items.is_empty() => PivotDateGroup::None,
                 None => {
                     cx.warn(format!("PivotTable grouping of \"{}\" is not supported; the field is ungrouped", f.name));
                     PivotDateGroup::None
